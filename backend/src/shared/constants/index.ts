@@ -12,3 +12,7 @@ export const AUTH_SECURITY = {
 export const JWT_DEFAULTS = {
   EXPIRES_IN: '7d',
 } as const;
+
+export const PATIENTS = {
+  CODE_PREFIX: 'PAT',
+} as const;
