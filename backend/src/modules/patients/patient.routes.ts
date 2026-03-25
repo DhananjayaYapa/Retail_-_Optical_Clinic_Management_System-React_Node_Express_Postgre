@@ -28,13 +28,7 @@ const router = Router();
  *       409:
  *         description: Potential duplicate detected
  */
-router.post(
-  '/',
-  authenticate,
-  authorize('ADMIN', 'CASHIER'),
-  validate({ body: createPatientSchema }),
-  create,
-);
+router.post('/', authenticate, authorize('ADMIN'), validate({ body: createPatientSchema }), create);
 
 /**
  * @swagger
@@ -124,7 +118,7 @@ router.delete(
 router.post(
   '/:id/restore',
   authenticate,
-  authorize('ADMIN'),
+  authorize('ADMIN', 'CASHIER'),
   validate({ params: patientIdParamSchema }),
   restore,
 );
