@@ -33,12 +33,12 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction) =
     };
     next();
   } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError) {
-      next(new UnauthorizedError('Invalid token'));
-      return;
-    }
     if (error instanceof jwt.TokenExpiredError) {
       next(new UnauthorizedError('Token has expired'));
+      return;
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      next(new UnauthorizedError('Invalid token'));
       return;
     }
     next(error);
