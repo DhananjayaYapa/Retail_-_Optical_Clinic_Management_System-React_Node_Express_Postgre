@@ -50,9 +50,9 @@ app.get('/', (_req, res) => {
     endpoints: {
       health: 'GET /api/v1/health',
       auth: {
-        register: 'POST /api/v1/auth/register',
         login: 'POST /api/v1/auth/login',
         profile: 'GET /api/v1/auth/profile',
+        logout: 'POST /api/v1/auth/logout',
       },
       patients: 'GET /api/v1/patients',
       branches: 'GET /api/v1/branches',
