@@ -1,0 +1,107 @@
+@use 'sass:color';
+@use './constants.scss' as *;
+
+// Global utility classes
+.glass-surface {
+  background: linear-gradient(135deg, rgba($surface-background, 0.9) 0%, rgba($dark-background, 0.8) 100%);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: $radius-xl;
+}
+
+.income-text {
+  color: $income-color;
+}
+
+.expense-text {
+  color: $expense-color;
+}
+
+.text-primary {
+  color: $text-primary;
+}
+
+.text-secondary {
+  color: $text-secondary;
+}
+
+// Layout utilities
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.full-height {
+  min-height: 100vh;
+}
+
+// Animation keyframes
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn $transition-normal forwards;
+}
+
+.slide-in {
+  animation: slideIn $transition-normal forwards;
+}
+
+// Pacman Loader Theme - Green Finance Colors
+.loader-inner.pacman > div:first-of-type,
+.loader-inner.pacman > div:nth-child(2) {
+  border-top-color: $primary-green !important;
+  border-left-color: $primary-green !important;
+  border-bottom-color: $primary-green !important;
+}
+
+.loader-inner.pacman > div:nth-child(3),
+.loader-inner.pacman > div:nth-child(4),
+.loader-inner.pacman > div:nth-child(5),
+.loader-inner.pacman > div:nth-child(6) {
+  background-color: $primary-green !important;
+}
+
+// Smaller pacman size variant
+.pacman-sm {
+  transform: scale(0.6);
+}
+
+.pacman-lg {
+  transform: scale(1.2);
+}
