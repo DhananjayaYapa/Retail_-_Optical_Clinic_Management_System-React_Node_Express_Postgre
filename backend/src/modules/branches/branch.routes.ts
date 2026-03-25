@@ -81,7 +81,7 @@ router.get(
 router.patch(
   '/:id',
   authenticate,
-  authorize('ADMIN'),
+  authorize('ADMIN', 'CASHIER'),
   validate({ params: branchIdParamSchema, body: updateBranchSchema }),
   update,
 );
