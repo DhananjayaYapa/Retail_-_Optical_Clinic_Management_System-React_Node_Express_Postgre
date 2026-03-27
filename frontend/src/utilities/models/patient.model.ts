@@ -97,6 +97,61 @@ export interface BranchListItem {
   address: string | null
 }
 
+// --- Full Patient Record (from GET /patients/:id) ---
+export interface PatientFullAddress {
+  addressLine1: string
+  addressLine2: string | null
+  city: string | null
+  province: string | null
+  postalCode: string | null
+}
+
+export interface PatientFullEmergencyContact {
+  fullName: string
+  relationship: string | null
+  contactNumber: string
+  addressLine1: string | null
+  addressLine2: string | null
+  city: string | null
+  province: string | null
+  postalCode: string | null
+}
+
+export interface PatientFullInsuranceInfo {
+  healthCardNumber: string | null
+  healthCardVisionCode: string | null
+  expiryDate: string | null
+  preferredDoctor: string | null
+}
+
+export interface PatientFullAdditionalInfo {
+  guardian: string | null
+  referredBy: string | null
+  patientNote: string | null
+}
+
+export interface PatientFullApiRecord {
+  id: number
+  patientCode: string
+  fullName: string
+  dateOfBirth: string
+  gender: Gender
+  branchId: number
+  registrationDate: string
+  branch: { id: number; name: string; code: string }
+  address: PatientFullAddress | null
+  phoneNumbers: PatientPhone[]
+  emergencyContact: PatientFullEmergencyContact | null
+  insuranceInfo: PatientFullInsuranceInfo | null
+  additionalInfo: PatientFullAdditionalInfo | null
+}
+
+export interface PatientFullApiResponse {
+  success: boolean
+  message: string
+  data: PatientFullApiRecord
+}
+
 // --- Create Patient API Payload ---
 export interface CreatePatientPayload {
   fullName: string
@@ -134,6 +189,45 @@ export interface CreatePatientPayload {
     referredBy?: string
     patientNote?: string
   }
+}
+
+// --- Update Patient API Payload ---
+export interface UpdatePatientPayload {
+  fullName?: string
+  dateOfBirth?: string
+  gender?: Gender
+  branchId?: number
+  address?: {
+    addressLine1: string
+    addressLine2?: string
+    city?: string
+    province?: string
+    postalCode?: string
+  } | null
+  contactDetails?: {
+    phoneNumber?: string
+    businessPhone?: string
+    additionalPhone?: string
+  }
+  emergencyContact?: {
+    fullName: string
+    relationship?: string
+    contactNumber: string
+    addressLine1?: string
+    addressLine2?: string
+    city?: string
+  } | null
+  insuranceInfo?: {
+    healthCardNumber?: string
+    healthCardVisionCode?: string
+    expiryDate?: string
+    preferredDoctor?: string
+  } | null
+  additionalInfo?: {
+    guardian?: string
+    referredBy?: string
+    patientNote?: string
+  } | null
 }
 
 export interface PatientEntryFormDto {

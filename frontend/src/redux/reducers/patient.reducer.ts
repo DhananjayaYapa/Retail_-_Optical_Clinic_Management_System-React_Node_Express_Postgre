@@ -1,5 +1,6 @@
 import type {
   BranchListItem,
+  PatientFullApiRecord,
   PatientListItem,
   PatientListResponse,
   PaginationMeta,
@@ -11,6 +12,9 @@ export interface PatientState {
   pagination: PaginationMeta
   isLoading: boolean
   isCreating: boolean
+  isUpdating: boolean
+  isFetchingPatient: boolean
+  editingPatient: PatientFullApiRecord | null
   branches: BranchListItem[]
   error: string | null
 }
@@ -25,6 +29,9 @@ const initialState: PatientState = {
   },
   isLoading: false,
   isCreating: false,
+  isUpdating: false,
+  isFetchingPatient: false,
+  editingPatient: null,
   branches: [],
   error: null,
 }
@@ -82,6 +89,43 @@ const patientReducer = (
       return {
         ...state,
         branches: action.payload as BranchListItem[],
+      }
+    case PATIENT_ACTIONS.FETCH_BY_ID_REQUEST:
+      return {
+        ...state,
+        isFetchingPatient: true,
+        editingPatient: null,
+        error: null,
+      }
+    case PATIENT_ACTIONS.FETCH_BY_ID_SUCCESS:
+      return {
+        ...state,
+        isFetchingPatient: false,
+        editingPatient: action.payload as PatientFullApiRecord,
+      }
+    case PATIENT_ACTIONS.FETCH_BY_ID_ERROR:
+      return {
+        ...state,
+        isFetchingPatient: false,
+        error: action.payload as string,
+      }
+    case PATIENT_ACTIONS.UPDATE_REQUEST:
+      return {
+        ...state,
+        isUpdating: true,
+        error: null,
+      }
+    case PATIENT_ACTIONS.UPDATE_SUCCESS:
+      return {
+        ...state,
+        isUpdating: false,
+        editingPatient: null,
+      }
+    case PATIENT_ACTIONS.UPDATE_ERROR:
+      return {
+        ...state,
+        isUpdating: false,
+        error: action.payload as string,
       }
     default:
       return state

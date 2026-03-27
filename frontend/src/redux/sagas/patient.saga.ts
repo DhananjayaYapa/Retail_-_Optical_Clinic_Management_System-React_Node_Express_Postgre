@@ -6,8 +6,10 @@ import { PATIENT_ACTION_TYPES } from '../../utilities/constants'
 import type {
   BranchListItem,
   CreatePatientPayload,
+  PatientFullApiRecord,
   PatientListQueryParams,
   PatientListResponse,
+  UpdatePatientPayload,
 } from '../../utilities/models'
 
 interface FetchPatientsAction {
@@ -18,6 +20,16 @@ interface FetchPatientsAction {
 interface CreatePatientAction {
   type: typeof PATIENT_ACTIONS.CREATE_REQUEST
   payload: CreatePatientPayload
+}
+
+interface FetchPatientByIdAction {
+  type: typeof PATIENT_ACTIONS.FETCH_BY_ID_REQUEST
+  payload: number
+}
+
+interface UpdatePatientAction {
+  type: typeof PATIENT_ACTIONS.UPDATE_REQUEST
+  payload: { id: number; data: UpdatePatientPayload }
 }
 
 function* fetchPatientsSaga(action: FetchPatientsAction): Generator {
@@ -67,8 +79,41 @@ function* fetchBranchesSaga(): Generator {
   }
 }
 
+function* fetchPatientByIdSaga(action: FetchPatientByIdAction): Generator {
+  try {
+    const data = (yield call(patientService.getPatientById, action.payload)) as PatientFullApiRecord
+    yield put(patientActions.fetchPatientByIdSuccess(data))
+  } catch (error: unknown) {
+    const message =
+      (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
+      'Failed to fetch patient details'
+    yield put(patientActions.fetchPatientByIdError(message))
+  }
+}
+
+function* updatePatientSaga(action: UpdatePatientAction): Generator {
+  try {
+    yield call(patientService.updatePatient, action.payload.id, action.payload.data)
+    yield put(patientActions.updatePatientSuccess())
+    yield call(
+      dispatchAlert,
+      PATIENT_ACTION_TYPES.UPDATE_PATIENT,
+      'Patient updated successfully',
+      'success'
+    )
+  } catch (error: unknown) {
+    const message =
+      (error as { response?: { data?: { message?: string } } }).response?.data?.message ||
+      'Failed to update patient'
+    yield put(patientActions.updatePatientError(message))
+    yield call(dispatchAlert, PATIENT_ACTION_TYPES.UPDATE_PATIENT, message, 'error')
+  }
+}
+
 export function* patientSaga() {
   yield takeLatest(PATIENT_ACTIONS.FETCH_LIST_REQUEST, fetchPatientsSaga)
   yield takeLatest(PATIENT_ACTIONS.CREATE_REQUEST, createPatientSaga)
   yield takeLatest(PATIENT_ACTIONS.FETCH_BRANCHES_REQUEST, fetchBranchesSaga)
+  yield takeLatest(PATIENT_ACTIONS.FETCH_BY_ID_REQUEST, fetchPatientByIdSaga)
+  yield takeLatest(PATIENT_ACTIONS.UPDATE_REQUEST, updatePatientSaga)
 }
