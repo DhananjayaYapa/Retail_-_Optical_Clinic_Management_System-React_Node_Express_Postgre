@@ -4,32 +4,35 @@ import { useNavigate } from 'react-router-dom'
 import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material'
 import { authActions } from '../../redux/actions'
 import { APP_ROUTES } from '../../utilities/constants'
+import type { AppDispatch } from '../../redux/store'
 
 const AuthPage = () => {
-  const dispatch = useDispatch()
+  const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
 
   const [email, setEmail] = useState('admin@clinic.local')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  const onLogin = () => {
+  const onLogin = async () => {
     if (!email.trim() || !password.trim()) {
       setError('Email and password are required')
       return
     }
 
-    dispatch(
-      authActions.loginSuccess({
-        token: 'local-dev-token',
-        user: {
-          userId: 'local-user',
-          email: email.trim().toLowerCase(),
-          name: 'Clinic User',
-          role: 'ADMIN',
-        },
+    setError(null)
+
+    const result = await dispatch(
+      authActions.login({
+        email: email.trim().toLowerCase(),
+        password,
       })
     )
+
+    if (!result.success) {
+      setError(result.message)
+      return
+    }
 
     navigate(APP_ROUTES.DASHBOARD)
   }
