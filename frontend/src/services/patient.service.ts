@@ -4,10 +4,13 @@ import type {
   CreatePatientPayload,
   HealthCardStatus,
   PatientApiRecord,
+  PatientFullApiRecord,
+  PatientFullApiResponse,
   PatientListApiResponse,
   PatientListItem,
   PatientListQueryParams,
   PatientListResponse,
+  UpdatePatientPayload,
 } from '../utilities/models'
 import { API_ROUTES } from '../utilities/constants'
 
@@ -65,6 +68,18 @@ export const patientService = {
 
   async createPatient(payload: CreatePatientPayload) {
     const response = await axiosPrivateInstance.post(API_ROUTES.PATIENTS, payload)
+    return response.data
+  },
+
+  async getPatientById(id: number): Promise<PatientFullApiRecord> {
+    const response = await axiosPrivateInstance.get<PatientFullApiResponse>(
+      `${API_ROUTES.PATIENTS}/${id}`
+    )
+    return response.data.data
+  },
+
+  async updatePatient(id: number, payload: UpdatePatientPayload) {
+    const response = await axiosPrivateInstance.patch(`${API_ROUTES.PATIENTS}/${id}`, payload)
     return response.data
   },
 

@@ -3,13 +3,21 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Alert, Box, Collapse, LinearProgress } from '@mui/material'
 
-import { PageHeader, PatientEntryForm, PatientFilters, PatientTable } from '../../components'
+import {
+  PageHeader,
+  PatientEntryForm,
+  PatientFilters,
+  PatientTable,
+  PatientUpdateForm,
+} from '../../components'
 import type {
   CreatePatientPayload,
   PatientEntryFormDto,
   PatientFilterFormDto,
   PatientFilterOptions,
+  PatientFullApiRecord,
   PatientListItem,
+  UpdatePatientPayload,
 } from '../../utilities/models'
 import { validateControlledFormData } from '../../utilities/helpers/controlledFormValidator'
 import { patientActions } from '../../redux/actions'
@@ -110,16 +118,96 @@ const matchesAgeRange = (dob: string, range: string): boolean => {
   return age >= min && age <= max
 }
 
+const parseFullName = (
+  fullName: string
+): { title: string; firstName: string; middleName: string; lastName: string } => {
+  const titles = ['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.']
+  const parts = fullName.trim().split(/\s+/)
+  let title = ''
+  if (parts.length > 0 && titles.includes(parts[0])) {
+    title = parts.shift()!
+  }
+  const firstName = parts.shift() || ''
+  const lastName = parts.pop() || ''
+  const middleName = parts.join(' ')
+  return { title, firstName, middleName, lastName }
+}
+
+const mapPatientToFormData = (patient: PatientFullApiRecord): PatientEntryFormDto => {
+  const { title, firstName, middleName, lastName } = parseFullName(patient.fullName)
+  const setVal = (
+    base: PatientEntryFormDto[keyof PatientEntryFormDto],
+    value: string
+  ): PatientEntryFormDto[keyof PatientEntryFormDto] => ({ ...base, value })
+
+  const mobile = patient.phoneNumbers.find((p) => p.isPrimary || p.phoneType === 'MOBILE')
+  const business = patient.phoneNumbers.find((p) => p.phoneType === 'BUSINESS')
+  const additional = patient.phoneNumbers.find((p) => p.phoneType === 'ADDITIONAL')
+
+  const base = { ...INITIAL_ENTRY_STATE }
+  return {
+    ...base,
+    title: setVal(base.title, title),
+    firstName: setVal(base.firstName, firstName),
+    lastName: setVal(base.lastName, lastName),
+    middleName: setVal(base.middleName, middleName),
+    dateOfBirth: setVal(base.dateOfBirth, patient.dateOfBirth.split('T')[0]),
+    gender: setVal(base.gender, patient.gender),
+    branch: setVal(base.branch, String(patient.branchId)),
+    address1: setVal(base.address1, patient.address?.addressLine1 || ''),
+    address2: setVal(base.address2, patient.address?.addressLine2 || ''),
+    city: setVal(base.city, patient.address?.city || ''),
+    province: setVal(base.province, patient.address?.province || ''),
+    country: setVal(base.country, ''),
+    postalCode: setVal(base.postalCode, patient.address?.postalCode || ''),
+    phoneNumber: setVal(base.phoneNumber, mobile?.phoneNumber || ''),
+    businessPhone: setVal(base.businessPhone, business?.phoneNumber || ''),
+    alternativePhone: setVal(base.alternativePhone, additional?.phoneNumber || ''),
+    email: setVal(base.email, ''),
+    emergencyFullName: setVal(base.emergencyFullName, patient.emergencyContact?.fullName || ''),
+    emergencyRelationship: setVal(
+      base.emergencyRelationship,
+      patient.emergencyContact?.relationship || ''
+    ),
+    emergencyAddress1: setVal(base.emergencyAddress1, patient.emergencyContact?.addressLine1 || ''),
+    emergencyAddress2: setVal(base.emergencyAddress2, patient.emergencyContact?.addressLine2 || ''),
+    emergencyCity: setVal(base.emergencyCity, patient.emergencyContact?.city || ''),
+    emergencyContactNumber: setVal(
+      base.emergencyContactNumber,
+      patient.emergencyContact?.contactNumber || ''
+    ),
+    healthCardNumber: setVal(base.healthCardNumber, patient.insuranceInfo?.healthCardNumber || ''),
+    healthCardVisionCode: setVal(
+      base.healthCardVisionCode,
+      patient.insuranceInfo?.healthCardVisionCode || ''
+    ),
+    insuranceExpireDate: setVal(
+      base.insuranceExpireDate,
+      patient.insuranceInfo?.expiryDate ? patient.insuranceInfo.expiryDate.split('T')[0] : ''
+    ),
+    preferDoctor: setVal(base.preferDoctor, patient.insuranceInfo?.preferredDoctor || ''),
+    guardian: setVal(base.guardian, patient.additionalInfo?.guardian || ''),
+    referredBy: setVal(base.referredBy, patient.additionalInfo?.referredBy || ''),
+    patientNote: setVal(base.patientNote, patient.additionalInfo?.patientNote || ''),
+  }
+}
+
 const Patients = () => {
   const dispatch = useDispatch<AppDispatch>()
-  const { rows, isLoading, isCreating, branches } = useSelector((state: RootState) => state.patient)
+  const { rows, isLoading, isCreating, isUpdating, isFetchingPatient, editingPatient, branches } =
+    useSelector((state: RootState) => state.patient)
   const searchTerm = useSelector((state: RootState) => state.search.term)
   const alert = useSelector((state: RootState) => state.alert.fetchPatients)
   const createAlert = useSelector((state: RootState) => state.alert.createPatient)
+  const updateAlert = useSelector((state: RootState) => state.alert.updatePatient)
   const [filters, setFilters] = useState<PatientFilterFormDto>(INITIAL_FILTER_STATE)
   const [showEntryForm, setShowEntryForm] = useState(false)
   const [entryFormData, setEntryFormData] = useState<PatientEntryFormDto>(INITIAL_ENTRY_STATE)
+  const [showUpdateForm, setShowUpdateForm] = useState(false)
+  const [updateFormData, setUpdateFormData] = useState<PatientEntryFormDto>(INITIAL_ENTRY_STATE)
+  const [editingPatientId, setEditingPatientId] = useState<number | null>(null)
   const prevCreateAlertRef = useRef(createAlert)
+  const prevUpdateAlertRef = useRef(updateAlert)
 
   useEffect(() => {
     dispatch(patientActions.fetchPatients({ page: 1, limit: 100 }))
@@ -139,6 +227,27 @@ const Patients = () => {
     }
     prevCreateAlertRef.current = createAlert
   }, [createAlert, dispatch])
+
+  // Watch updateAlert — on success, close dialog, reset form, re-fetch list
+  useEffect(() => {
+    if (
+      updateAlert &&
+      updateAlert.severity === 'success' &&
+      prevUpdateAlertRef.current !== updateAlert
+    ) {
+      setShowUpdateForm(false)
+      setUpdateFormData(INITIAL_ENTRY_STATE)
+      setEditingPatientId(null)
+      dispatch(patientActions.fetchPatients({ page: 1, limit: 100 }))
+    }
+    prevUpdateAlertRef.current = updateAlert
+  }, [updateAlert, dispatch])
+
+  // Populate update form when editingPatient is fetched
+  useEffect(() => {
+    if (!editingPatient) return
+    setUpdateFormData(mapPatientToFormData(editingPatient))
+  }, [editingPatient])
 
   const filterOptions = useMemo<PatientFilterOptions>(() => {
     const firstNames = new Set<string>()
@@ -348,7 +457,114 @@ const Patients = () => {
   }
 
   const handleUpdate = (patient: PatientListItem) => {
-    void patient
+    setEditingPatientId(patient.id)
+    setShowUpdateForm(true)
+    dispatch(patientActions.fetchPatientById(patient.id))
+  }
+
+  const onUpdateInputHandleChange = (property: keyof PatientEntryFormDto, value: string) => {
+    setUpdateFormData((prev) => ({
+      ...prev,
+      [property]: {
+        ...prev[property],
+        value,
+      },
+    }))
+  }
+
+  const handleUpdateInputFocus = (property: keyof PatientEntryFormDto) => {
+    setUpdateFormData((prev) => ({
+      ...prev,
+      [property]: {
+        ...prev[property],
+        error: null,
+      },
+    }))
+  }
+
+  const handleCancelUpdate = () => {
+    setShowUpdateForm(false)
+    setUpdateFormData(INITIAL_ENTRY_STATE)
+    setEditingPatientId(null)
+  }
+
+  const handleSaveUpdate = async () => {
+    const [validatedData, isValid] = await validateControlledFormData(updateFormData)
+    setUpdateFormData(validatedData as PatientEntryFormDto)
+
+    if (!isValid || !editingPatientId) return
+
+    const fd = validatedData as PatientEntryFormDto
+
+    const nameParts = [
+      fd.title.value,
+      fd.firstName.value,
+      fd.middleName.value,
+      fd.lastName.value,
+    ].filter(Boolean)
+    const fullName = nameParts.join(' ')
+
+    const payload: UpdatePatientPayload = {
+      fullName,
+      dateOfBirth: fd.dateOfBirth.value,
+      gender: fd.gender.value as UpdatePatientPayload['gender'],
+      branchId: Number(fd.branch.value),
+      address: fd.address1.value
+        ? {
+            addressLine1: fd.address1.value,
+            addressLine2: fd.address2.value || undefined,
+            city: fd.city.value || undefined,
+            province: fd.province.value || undefined,
+            postalCode: fd.postalCode.value || undefined,
+          }
+        : null,
+      contactDetails: {
+        phoneNumber: fd.phoneNumber.value || undefined,
+        businessPhone: fd.businessPhone.value || undefined,
+        additionalPhone: fd.alternativePhone.value || undefined,
+      },
+    }
+
+    if (fd.emergencyFullName.value && fd.emergencyContactNumber.value) {
+      payload.emergencyContact = {
+        fullName: fd.emergencyFullName.value,
+        relationship: fd.emergencyRelationship.value || undefined,
+        contactNumber: fd.emergencyContactNumber.value,
+        addressLine1: fd.emergencyAddress1.value || undefined,
+        addressLine2: fd.emergencyAddress2.value || undefined,
+        city: fd.emergencyCity.value || undefined,
+      }
+    } else {
+      payload.emergencyContact = null
+    }
+
+    if (
+      fd.healthCardNumber.value ||
+      fd.healthCardVisionCode.value ||
+      fd.insuranceExpireDate.value ||
+      fd.preferDoctor.value
+    ) {
+      payload.insuranceInfo = {
+        healthCardNumber: fd.healthCardNumber.value || undefined,
+        healthCardVisionCode: fd.healthCardVisionCode.value || undefined,
+        expiryDate: fd.insuranceExpireDate.value || undefined,
+        preferredDoctor: fd.preferDoctor.value || undefined,
+      }
+    } else {
+      payload.insuranceInfo = null
+    }
+
+    if (fd.guardian.value || fd.referredBy.value || fd.patientNote.value) {
+      payload.additionalInfo = {
+        guardian: fd.guardian.value || undefined,
+        referredBy: fd.referredBy.value || undefined,
+        patientNote: fd.patientNote.value || undefined,
+      }
+    } else {
+      payload.additionalInfo = null
+    }
+
+    dispatch(patientActions.updatePatient(editingPatientId, payload))
   }
 
   return (
@@ -379,6 +595,26 @@ const Patients = () => {
         onSave={handleSavePatient}
         onCancel={handleCancelEntry}
       />
+
+      <PatientUpdateForm
+        open={showUpdateForm}
+        formData={updateFormData}
+        isSubmitting={isUpdating}
+        isLoading={isFetchingPatient}
+        branches={branches}
+        onInputHandleChange={onUpdateInputHandleChange}
+        onInputFocus={handleUpdateInputFocus}
+        onSave={handleSaveUpdate}
+        onCancel={handleCancelUpdate}
+      />
+
+      <Collapse in={!!updateAlert}>
+        {updateAlert && (
+          <Alert severity={updateAlert.severity} sx={{ mb: 2 }}>
+            {updateAlert.message}
+          </Alert>
+        )}
+      </Collapse>
 
       <Collapse in={!!createAlert}>
         {createAlert && (

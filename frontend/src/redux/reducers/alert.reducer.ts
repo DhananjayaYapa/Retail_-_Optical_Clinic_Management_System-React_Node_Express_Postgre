@@ -8,11 +8,13 @@ interface AlertItem {
 export interface AlertState {
   fetchPatients: AlertItem | null
   createPatient: AlertItem | null
+  updatePatient: AlertItem | null
 }
 
 const initialState: AlertState = {
   fetchPatients: null,
   createPatient: null,
+  updatePatient: null,
 }
 
 interface AlertAction {
@@ -48,6 +50,19 @@ const alertReducer = (state: AlertState = initialState, action: AlertAction): Al
       return {
         ...state,
         createPatient: null,
+      }
+    case PATIENT_ACTION_TYPES.UPDATE_PATIENT + COMMON_ACTION_TYPES.SET_ALERT:
+      return {
+        ...state,
+        updatePatient: {
+          message: action.message || '',
+          severity: action.severity || 'error',
+        },
+      }
+    case PATIENT_ACTION_TYPES.UPDATE_PATIENT + COMMON_ACTION_TYPES.CLEAR_ALERT:
+      return {
+        ...state,
+        updatePatient: null,
       }
     default:
       return state
