@@ -1,0 +1,25 @@
+import type { PatientListQueryParams, PatientListResponse } from '../../utilities/models'
+import { COMMON_ACTION_TYPES, PATIENT_ACTION_TYPES } from '../../utilities/constants'
+
+export const PATIENT_ACTIONS = {
+  FETCH_LIST_REQUEST: PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.REQUEST,
+  FETCH_LIST_SUCCESS: PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.SUCCESS,
+  FETCH_LIST_ERROR: PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.ERROR,
+  FETCH_LIST_SET_ALERT: PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.SET_ALERT,
+  FETCH_LIST_CLEAR_ALERT: PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.CLEAR_ALERT,
+} as const
+
+export const patientActions = {
+  fetchPatients: (payload: PatientListQueryParams = {}) => ({
+    type: PATIENT_ACTIONS.FETCH_LIST_REQUEST as typeof PATIENT_ACTIONS.FETCH_LIST_REQUEST,
+    payload,
+  }),
+  fetchPatientsSuccess: (payload: PatientListResponse) => ({
+    type: PATIENT_ACTIONS.FETCH_LIST_SUCCESS as typeof PATIENT_ACTIONS.FETCH_LIST_SUCCESS,
+    payload,
+  }),
+  fetchPatientsError: (payload: string) => ({
+    type: PATIENT_ACTIONS.FETCH_LIST_ERROR as typeof PATIENT_ACTIONS.FETCH_LIST_ERROR,
+    payload,
+  }),
+}

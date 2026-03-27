@@ -6,7 +6,7 @@ import PrivateRoute from './PrivateRoute'
 
 import AuthPage from '../pages/AuthPage/AuthPage'
 import Dashboard from '../pages/Dashboard/Dashboard'
-import Patients from '../pages/Patients/Patients'
+import Patients from '../pages/Patients'
 import Profile from '../pages/Profile/Profile'
 import FutureModulePage from '../pages/Shared/FutureModulePage'
 

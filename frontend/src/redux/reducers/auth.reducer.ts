@@ -5,6 +5,8 @@ export interface AuthState {
   user: AuthUser | null
   token: string | null
   isAuthenticated: boolean
+  isLoading: boolean
+  error: string | null
 }
 
 const getUserFromStorage = (): AuthUser | null => {
@@ -20,6 +22,8 @@ const initialState: AuthState = {
   user: getUserFromStorage(),
   token: localStorage.getItem(TOKEN_KEY),
   isAuthenticated: Boolean(localStorage.getItem(TOKEN_KEY)),
+  isLoading: false,
+  error: null,
 }
 
 interface Action {
@@ -29,6 +33,12 @@ interface Action {
 
 const authReducer = (state: AuthState = initialState, action: Action): AuthState => {
   switch (action.type) {
+    case AUTH_ACTIONS.LOGIN_REQUEST:
+      return {
+        ...state,
+        isLoading: true,
+        error: null,
+      }
     case AUTH_ACTIONS.LOGIN_SUCCESS: {
       const payload = action.payload as { token: string; user: AuthUser }
       localStorage.setItem(TOKEN_KEY, payload.token)
@@ -38,8 +48,19 @@ const authReducer = (state: AuthState = initialState, action: Action): AuthState
         token: payload.token,
         user: payload.user,
         isAuthenticated: true,
+        isLoading: false,
+        error: null,
       }
     }
+    case AUTH_ACTIONS.LOGIN_ERROR:
+      return {
+        ...state,
+        isLoading: false,
+        isAuthenticated: false,
+        token: null,
+        user: null,
+        error: action.payload as string,
+      }
     case AUTH_ACTIONS.SET_PROFILE: {
       const user = action.payload as AuthUser
       localStorage.setItem(USER_KEY, JSON.stringify(user))
@@ -55,6 +76,8 @@ const authReducer = (state: AuthState = initialState, action: Action): AuthState
         user: null,
         token: null,
         isAuthenticated: false,
+        isLoading: false,
+        error: null,
       }
     default:
       return state

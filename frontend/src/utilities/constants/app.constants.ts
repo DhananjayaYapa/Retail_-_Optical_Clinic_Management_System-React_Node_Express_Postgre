@@ -1,5 +1,5 @@
 // Application Name
-export const APP_NAME = 'Retail Optical Clinic Management'
+export const APP_NAME = 'ClinickerX'
 
 // Token storage keys
 export const TOKEN_KEY = 'clinic_token'
@@ -24,5 +24,5 @@ export const DATE_DISPLAY_FORMAT = 'MMM DD, YYYY'
 export const MONTH_YEAR_FORMAT = 'MMMM YYYY'
 
 // Sidebar
-export const DRAWER_WIDTH = 260
-export const DRAWER_COLLAPSED_WIDTH = 72
+export const DRAWER_WIDTH = 200
+export const DRAWER_COLLAPSED_WIDTH = 64
