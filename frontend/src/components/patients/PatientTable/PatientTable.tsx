@@ -7,6 +7,7 @@ import type { HealthCardStatus, PatientListItem } from '../../../utilities/model
 interface PatientTableProps {
   rows: PatientListItem[]
   onUpdate?: (patient: PatientListItem) => void
+  onRowClick?: (patient: PatientListItem) => void
 }
 
 const getAge = (dateOfBirth: string): number => {
@@ -33,7 +34,7 @@ const getHealthCardColor = (status: HealthCardStatus): 'success' | 'warning' | '
   return 'default'
 }
 
-const PatientTable = ({ rows, onUpdate }: PatientTableProps) => {
+const PatientTable = ({ rows, onUpdate, onRowClick }: PatientTableProps) => {
   const columns = useMemo<GridColDef<PatientListItem>[]>(
     () => [
       {
@@ -125,6 +126,7 @@ const PatientTable = ({ rows, onUpdate }: PatientTableProps) => {
         columns={columns}
         disableRowSelectionOnClick
         autoHeight
+        onRowClick={(params) => onRowClick?.(params.row as PatientListItem)}
         pageSizeOptions={[10, 25, 50]}
         initialState={{
           pagination: {

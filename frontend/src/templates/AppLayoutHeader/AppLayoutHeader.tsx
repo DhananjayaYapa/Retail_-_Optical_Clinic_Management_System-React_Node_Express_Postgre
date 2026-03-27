@@ -1,7 +1,6 @@
 import SearchIcon from '@mui/icons-material/Search'
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'
 import SettingsIcon from '@mui/icons-material/Settings'
-import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import {
@@ -146,11 +145,14 @@ const AppLayoutHeader = () => {
         >
           <NotificationsNoneIcon fontSize="small" />
         </IconButton>
-
-        <Button variant="outlined" size="small" startIcon={<SwapHorizIcon fontSize="small" />}>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<WarningAmberIcon fontSize="small" />}
+          sx={{ display: { xs: 'none', md: 'inline-flex' } }}
+        >
           Switch/Lock User
         </Button>
-
         {/* Full buttons - visible on md+ screens */}
         <Button
           variant="outlined"
@@ -190,7 +192,7 @@ const AppLayoutHeader = () => {
         >
           <MenuItem>
             <ListItemIcon>
-              <SwapHorizIcon fontSize="small" />
+              <WarningAmberIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>Switch/Lock User</ListItemText>
           </MenuItem>

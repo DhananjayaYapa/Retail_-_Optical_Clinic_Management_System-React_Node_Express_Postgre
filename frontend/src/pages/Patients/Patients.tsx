@@ -1,12 +1,14 @@
 import AddIcon from '@mui/icons-material/Add'
+import CloseIcon from '@mui/icons-material/Close'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Alert, Box, Collapse, LinearProgress } from '@mui/material'
+import { Alert, Box, Collapse, IconButton, LinearProgress } from '@mui/material'
 
 import {
   PageHeader,
   PatientEntryForm,
   PatientFilters,
+  PatientProfile,
   PatientTable,
   PatientUpdateForm,
 } from '../../components'
@@ -206,6 +208,7 @@ const Patients = () => {
   const [showUpdateForm, setShowUpdateForm] = useState(false)
   const [updateFormData, setUpdateFormData] = useState<PatientEntryFormDto>(INITIAL_ENTRY_STATE)
   const [editingPatientId, setEditingPatientId] = useState<number | null>(null)
+  const [showProfile, setShowProfile] = useState(false)
   const prevCreateAlertRef = useRef(createAlert)
   const prevUpdateAlertRef = useRef(updateAlert)
 
@@ -456,6 +459,15 @@ const Patients = () => {
     dispatch(patientActions.createPatient(payload))
   }
 
+  const handleRowClick = (patient: PatientListItem) => {
+    setShowProfile(true)
+    dispatch(patientActions.fetchPatientById(patient.id))
+  }
+
+  const handleCloseProfile = () => {
+    setShowProfile(false)
+  }
+
   const handleUpdate = (patient: PatientListItem) => {
     setEditingPatientId(patient.id)
     setShowUpdateForm(true)
@@ -633,7 +645,40 @@ const Patients = () => {
       </Collapse>
 
       {isLoading && <LinearProgress sx={{ mb: 1 }} />}
-      <PatientTable rows={filteredRows} onUpdate={handleUpdate} />
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 2,
+          flexDirection: { xs: 'column', lg: 'row' },
+        }}
+      >
+        <Box sx={{ flex: showProfile ? 1 : 1, minWidth: 0 }}>
+          <PatientTable rows={filteredRows} onUpdate={handleUpdate} onRowClick={handleRowClick} />
+        </Box>
+        {showProfile && (
+          <Box
+            sx={{
+              flex: 2,
+              minWidth: 0,
+              position: 'relative',
+              overflowX: 'auto',
+            }}
+          >
+            <IconButton
+              size="small"
+              onClick={handleCloseProfile}
+              sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+            {editingPatient ? (
+              <PatientProfile patient={editingPatient} />
+            ) : (
+              <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>Loading...</Box>
+            )}
+          </Box>
+        )}
+      </Box>
     </Box>
   )
 }
