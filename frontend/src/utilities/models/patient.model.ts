@@ -138,6 +138,7 @@ export interface PatientFullApiRecord {
   gender: Gender
   branchId: number
   registrationDate: string
+  deletedAt: string | null
   branch: { id: number; name: string; code: string }
   address: PatientFullAddress | null
   phoneNumbers: PatientPhone[]
