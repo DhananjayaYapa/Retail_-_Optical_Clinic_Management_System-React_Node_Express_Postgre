@@ -1,5 +1,7 @@
 import { axiosPrivateInstance } from './index'
 import type {
+  BranchListItem,
+  CreatePatientPayload,
   HealthCardStatus,
   PatientApiRecord,
   PatientListApiResponse,
@@ -59,5 +61,17 @@ export const patientService = {
     })
 
     return normalizeListResponse(response.data)
+  },
+
+  async createPatient(payload: CreatePatientPayload) {
+    const response = await axiosPrivateInstance.post(API_ROUTES.PATIENTS, payload)
+    return response.data
+  },
+
+  async getBranches(): Promise<BranchListItem[]> {
+    const response = await axiosPrivateInstance.get(API_ROUTES.BRANCHES, {
+      params: { limit: 100 },
+    })
+    return response.data.data.data as BranchListItem[]
   },
 }

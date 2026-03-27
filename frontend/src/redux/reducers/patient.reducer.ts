@@ -1,10 +1,17 @@
-import type { PatientListItem, PatientListResponse, PaginationMeta } from '../../utilities/models'
+import type {
+  BranchListItem,
+  PatientListItem,
+  PatientListResponse,
+  PaginationMeta,
+} from '../../utilities/models'
 import { PATIENT_ACTIONS } from '../actions/patient.actions'
 
 export interface PatientState {
   rows: PatientListItem[]
   pagination: PaginationMeta
   isLoading: boolean
+  isCreating: boolean
+  branches: BranchListItem[]
   error: string | null
 }
 
@@ -17,12 +24,15 @@ const initialState: PatientState = {
     totalPages: 0,
   },
   isLoading: false,
+  isCreating: false,
+  branches: [],
   error: null,
 }
 
 interface PatientAction {
   type: string
-  payload?: PatientListResponse | string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  payload?: any
 }
 
 const patientReducer = (
@@ -50,6 +60,28 @@ const patientReducer = (
         ...state,
         isLoading: false,
         error: action.payload as string,
+      }
+    case PATIENT_ACTIONS.CREATE_REQUEST:
+      return {
+        ...state,
+        isCreating: true,
+        error: null,
+      }
+    case PATIENT_ACTIONS.CREATE_SUCCESS:
+      return {
+        ...state,
+        isCreating: false,
+      }
+    case PATIENT_ACTIONS.CREATE_ERROR:
+      return {
+        ...state,
+        isCreating: false,
+        error: action.payload as string,
+      }
+    case PATIENT_ACTIONS.FETCH_BRANCHES_SUCCESS:
+      return {
+        ...state,
+        branches: action.payload as BranchListItem[],
       }
     default:
       return state

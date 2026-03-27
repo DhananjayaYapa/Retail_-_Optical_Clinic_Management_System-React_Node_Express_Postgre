@@ -9,6 +9,9 @@ export interface FormFieldDto<T = string> {
   isRequired: boolean
   error: string | null
   disable: boolean
+  minLength?: number
+  pastOnly?: boolean
+  digitCount?: number
 }
 
 /**
@@ -16,9 +19,9 @@ export interface FormFieldDto<T = string> {
  * @param data Form data with fields containing value, validator, isRequired, error, disable
  * @returns [validatedData, isValid] tuple
  */
-export const validateControlledFormData = async (
-  data: { [key: string]: any }
-): Promise<[any, boolean]> => {
+export const validateControlledFormData = async (data: {
+  [key: string]: any
+}): Promise<[any, boolean]> => {
   let isValid = true
   let validatedData = data
 
@@ -32,8 +35,12 @@ export const validateControlledFormData = async (
       // Text validation
       if (fieldData.validator === 'text') {
         let error: string | null = null
-        if (fieldData.isRequired && !fieldData.value?.toString().trim()) {
+        const trimmed = fieldData.value?.toString().trim() || ''
+        if (fieldData.isRequired && !trimmed) {
           error = 'This field is required.'
+          isValid = false
+        } else if (trimmed && fieldData.minLength && trimmed.length < fieldData.minLength) {
+          error = `Minimum ${fieldData.minLength} characters required.`
           isValid = false
         }
         validatedData = {
@@ -117,6 +124,36 @@ export const validateControlledFormData = async (
         let error: string | null = null
         if (fieldData.isRequired && !fieldData.value) {
           error = 'Date is required.'
+          isValid = false
+        } else if (fieldData.value && fieldData.pastOnly) {
+          const selected = new Date(fieldData.value)
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          if (selected >= today) {
+            error = 'Date must be in the past.'
+            isValid = false
+          }
+        }
+        validatedData = {
+          ...validatedData,
+          [field]: {
+            ...fieldData,
+            error,
+          },
+        }
+      }
+
+      // Phone validation (numeric, exact digit count)
+      if (fieldData.validator === 'phone') {
+        let error: string | null = null
+        const value = fieldData.value?.toString().trim() || ''
+        const digits = fieldData.digitCount || 10
+        const digitRegex = new RegExp(`^[0-9]{${digits}}$`)
+        if (fieldData.isRequired && !value) {
+          error = 'This field is required.'
+          isValid = false
+        } else if (value && !digitRegex.test(value)) {
+          error = `Must be ${digits} digits.`
           isValid = false
         }
         validatedData = {
