@@ -88,3 +88,89 @@ export interface PatientFilterOptions {
   doctors: string[]
   healthCardNumbers: string[]
 }
+
+// --- Branch ---
+export interface BranchListItem {
+  id: number
+  name: string
+  code: string
+  address: string | null
+}
+
+// --- Create Patient API Payload ---
+export interface CreatePatientPayload {
+  fullName: string
+  dateOfBirth: string
+  gender: Gender
+  branchId: number
+  address?: {
+    addressLine1: string
+    addressLine2?: string
+    city?: string
+    province?: string
+    postalCode?: string
+  }
+  contactDetails: {
+    phoneNumber: string
+    businessPhone?: string
+    additionalPhone?: string
+  }
+  emergencyContact?: {
+    fullName: string
+    relationship?: string
+    contactNumber: string
+    addressLine1?: string
+    addressLine2?: string
+    city?: string
+  }
+  insuranceInfo?: {
+    healthCardNumber?: string
+    healthCardVisionCode?: string
+    expiryDate?: string
+    preferredDoctor?: string
+  }
+  additionalInfo?: {
+    guardian?: string
+    referredBy?: string
+    patientNote?: string
+  }
+}
+
+export interface PatientEntryFormDto {
+  // Patient Details
+  title: FormFieldDto<string>
+  firstName: FormFieldDto<string>
+  lastName: FormFieldDto<string>
+  middleName: FormFieldDto<string>
+  dateOfBirth: FormFieldDto<string>
+  gender: FormFieldDto<string>
+  branch: FormFieldDto<string>
+  // Address
+  address1: FormFieldDto<string>
+  address2: FormFieldDto<string>
+  city: FormFieldDto<string>
+  province: FormFieldDto<string>
+  country: FormFieldDto<string>
+  postalCode: FormFieldDto<string>
+  // Contact Details
+  phoneNumber: FormFieldDto<string>
+  businessPhone: FormFieldDto<string>
+  alternativePhone: FormFieldDto<string>
+  email: FormFieldDto<string>
+  // Emergency Contact
+  emergencyFullName: FormFieldDto<string>
+  emergencyRelationship: FormFieldDto<string>
+  emergencyAddress1: FormFieldDto<string>
+  emergencyAddress2: FormFieldDto<string>
+  emergencyCity: FormFieldDto<string>
+  emergencyContactNumber: FormFieldDto<string>
+  // Insurance Details
+  healthCardNumber: FormFieldDto<string>
+  healthCardVisionCode: FormFieldDto<string>
+  insuranceExpireDate: FormFieldDto<string>
+  preferDoctor: FormFieldDto<string>
+  // Additional Details
+  guardian: FormFieldDto<string>
+  referredBy: FormFieldDto<string>
+  patientNote: FormFieldDto<string>
+}
