@@ -1,0 +1,7 @@
+export { default as PatientTable } from './PatientTable/PatientTable'
+export { default as PatientFilters } from './PatientFilters/PatientFilters'
+export { default as PatientEntryForm } from './PatientEntryForm/PatientEntryForm'
+export { default as PatientUpdateForm } from './PatientUpdateForm/PatientUpdateForm'
+export { default as PatientProfile } from './PatientProfile/PatientProfile'
+export { default as DeleteConfirmDialog } from './DeleteConfirmDialog/DeleteConfirmDialog'
+export { default as DuplicateWarningDialog } from './DuplicateWarningDialog/DuplicateWarningDialog'

@@ -1,0 +1,287 @@
+import type { FormFieldDto } from '../helpers/controlledFormValidator'
+
+export type Gender = 'MALE' | 'FEMALE' | 'OTHER'
+
+export type HealthCardStatus = 'ACTIVE' | 'EXPIRED' | 'NOT_AVAILABLE'
+
+export interface DuplicatePatientWarning {
+  existingPatient: {
+    id: number
+    patientCode: string
+    fullName: string
+    dateOfBirth: string
+  }
+  mode: 'create' | 'update'
+  payload: CreatePatientPayload | UpdatePatientPayload
+  patientId?: number
+}
+
+export interface PaginationMeta {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
+}
+
+export interface PatientListQueryParams {
+  page?: number
+  limit?: number
+  search?: string
+  branchId?: number
+  gender?: Gender
+  includeDeleted?: boolean
+  sortBy?: 'createdAt' | 'updatedAt' | 'registrationDate' | 'fullName'
+  sortOrder?: 'asc' | 'desc'
+}
+
+export interface PatientPhone {
+  id: number
+  phoneType: 'MOBILE' | 'BUSINESS' | 'ADDITIONAL'
+  phoneNumber: string
+  isPrimary: boolean
+}
+
+export interface PatientInsuranceInfo {
+  healthCardNumber?: string | null
+  expiryDate?: string | null
+  preferredDoctor?: string | null
+}
+
+export interface PatientApiRecord {
+  id: number
+  patientCode: string
+  fullName: string
+  dateOfBirth: string
+  gender: Gender
+  phoneNumbers: PatientPhone[]
+  insuranceInfo?: PatientInsuranceInfo | null
+  deletedAt: string | null
+}
+
+export interface PatientListApiResponse {
+  success: boolean
+  message: string
+  data: {
+    data: PatientApiRecord[]
+    pagination: PaginationMeta
+  }
+}
+
+export interface PatientListResponse {
+  data: PatientListItem[]
+  pagination: PaginationMeta
+}
+
+export interface PatientListItem {
+  id: number
+  patientId: string
+  patientName: string
+  dateOfBirth: string
+  gender: Gender
+  phoneNumber: string
+  healthCardNumber: string
+  healthCardStatus: HealthCardStatus
+  refDoctor: string
+  deletedAt: string | null
+}
+
+export interface PatientFilterFormDto {
+  firstName: FormFieldDto<string>
+  lastName: FormFieldDto<string>
+  ageRange: FormFieldDto<string>
+  doctor: FormFieldDto<string>
+  healthCardNumber: FormFieldDto<string>
+  gender: FormFieldDto<string>
+  userStatus: FormFieldDto<string>
+  healthCardStatus: FormFieldDto<string>
+}
+
+export interface PatientFilterOptions {
+  firstNames: string[]
+  lastNames: string[]
+  doctors: string[]
+  healthCardNumbers: string[]
+}
+
+// --- Branch ---
+export interface BranchListItem {
+  id: number
+  name: string
+  code: string
+  address: string | null
+}
+
+// --- Full Patient Record (from GET /patients/:id) ---
+export interface PatientFullAddress {
+  addressLine1: string
+  addressLine2: string | null
+  city: string | null
+  province: string | null
+  postalCode: string | null
+}
+
+export interface PatientFullEmergencyContact {
+  fullName: string
+  relationship: string | null
+  contactNumber: string
+  addressLine1: string | null
+  addressLine2: string | null
+  city: string | null
+  province: string | null
+  postalCode: string | null
+}
+
+export interface PatientFullInsuranceInfo {
+  healthCardNumber: string | null
+  healthCardVisionCode: string | null
+  expiryDate: string | null
+  preferredDoctor: string | null
+}
+
+export interface PatientFullAdditionalInfo {
+  guardian: string | null
+  referredBy: string | null
+  patientNote: string | null
+}
+
+export interface PatientFullApiRecord {
+  id: number
+  patientCode: string
+  fullName: string
+  dateOfBirth: string
+  gender: Gender
+  branchId: number
+  registrationDate: string
+  deletedAt: string | null
+  branch: { id: number; name: string; code: string }
+  address: PatientFullAddress | null
+  phoneNumbers: PatientPhone[]
+  emergencyContact: PatientFullEmergencyContact | null
+  insuranceInfo: PatientFullInsuranceInfo | null
+  additionalInfo: PatientFullAdditionalInfo | null
+}
+
+export interface PatientFullApiResponse {
+  success: boolean
+  message: string
+  data: PatientFullApiRecord
+}
+
+// --- Create Patient API Payload ---
+export interface CreatePatientPayload {
+  fullName: string
+  dateOfBirth: string
+  gender: Gender
+  branchId: number
+  duplicateOverride?: boolean
+  address?: {
+    addressLine1: string
+    addressLine2?: string
+    city?: string
+    province?: string
+    postalCode?: string
+  }
+  contactDetails: {
+    phoneNumber: string
+    businessPhone?: string
+    additionalPhone?: string
+  }
+  emergencyContact?: {
+    fullName: string
+    relationship?: string
+    contactNumber: string
+    addressLine1?: string
+    addressLine2?: string
+    city?: string
+  }
+  insuranceInfo?: {
+    healthCardNumber?: string
+    healthCardVisionCode?: string
+    expiryDate?: string
+    preferredDoctor?: string
+  }
+  additionalInfo?: {
+    guardian?: string
+    referredBy?: string
+    patientNote?: string
+  }
+}
+
+// --- Update Patient API Payload ---
+export interface UpdatePatientPayload {
+  fullName?: string
+  dateOfBirth?: string
+  gender?: Gender
+  branchId?: number
+  duplicateOverride?: boolean
+  address?: {
+    addressLine1: string
+    addressLine2?: string
+    city?: string
+    province?: string
+    postalCode?: string
+  } | null
+  contactDetails?: {
+    phoneNumber?: string
+    businessPhone?: string
+    additionalPhone?: string
+  }
+  emergencyContact?: {
+    fullName: string
+    relationship?: string
+    contactNumber: string
+    addressLine1?: string
+    addressLine2?: string
+    city?: string
+  } | null
+  insuranceInfo?: {
+    healthCardNumber?: string
+    healthCardVisionCode?: string
+    expiryDate?: string
+    preferredDoctor?: string
+  } | null
+  additionalInfo?: {
+    guardian?: string
+    referredBy?: string
+    patientNote?: string
+  } | null
+}
+
+export interface PatientEntryFormDto {
+  // Patient Details
+  title: FormFieldDto<string>
+  firstName: FormFieldDto<string>
+  lastName: FormFieldDto<string>
+  middleName: FormFieldDto<string>
+  dateOfBirth: FormFieldDto<string>
+  gender: FormFieldDto<string>
+  branch: FormFieldDto<string>
+  // Address
+  address1: FormFieldDto<string>
+  address2: FormFieldDto<string>
+  city: FormFieldDto<string>
+  province: FormFieldDto<string>
+  country: FormFieldDto<string>
+  postalCode: FormFieldDto<string>
+  // Contact Details
+  phoneNumber: FormFieldDto<string>
+  businessPhone: FormFieldDto<string>
+  alternativePhone: FormFieldDto<string>
+  email: FormFieldDto<string>
+  // Emergency Contact
+  emergencyFullName: FormFieldDto<string>
+  emergencyRelationship: FormFieldDto<string>
+  emergencyAddress1: FormFieldDto<string>
+  emergencyAddress2: FormFieldDto<string>
+  emergencyCity: FormFieldDto<string>
+  emergencyContactNumber: FormFieldDto<string>
+  // Insurance Details
+  healthCardNumber: FormFieldDto<string>
+  healthCardVisionCode: FormFieldDto<string>
+  insuranceExpireDate: FormFieldDto<string>
+  preferDoctor: FormFieldDto<string>
+  // Additional Details
+  guardian: FormFieldDto<string>
+  referredBy: FormFieldDto<string>
+  patientNote: FormFieldDto<string>
+}
