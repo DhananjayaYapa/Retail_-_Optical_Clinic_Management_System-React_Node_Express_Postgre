@@ -1,0 +1,711 @@
+{
+  "info": {
+    "name": "Retail Optical Clinic Management System",
+    "description": "Complete API collection for the Optical Clinic Management System.\n\nAuthentication: JWT Bearer token obtained via POST /auth/login.\n\nRoles: ADMIN (full access), CASHIER (limited), OPTOMETRIST (professional).\n\nBase URL: http://localhost:5000/api/v1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "patientId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "branchId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "roleId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Returns server status, environment, and uptime. No authentication required."
+          },
+          "response": [
+            {
+              "name": "200 - Server Running",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"OK\",\n  \"message\": \"Retail Optical Clinic Management API is running\",\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\",\n  \"environment\": \"development\",\n  \"uptime\": 12345.67\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data && res.data.token) {",
+                  "    pm.collectionVariables.set('authToken', res.data.token);",
+                  "    console.log('Token saved to authToken variable');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@clinic.local\",\n  \"password\": \"Admin@12345\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Authenticate user and receive JWT token. Token is automatically saved to the `authToken` collection variable.\n\n**Seeded Users:**\n- Admin: admin@clinic.local / Admin@12345\n- Optometrist: optometrist@clinic.local / Opto@12345\n\n**Security:** Account locks after 5 failed attempts in 15 minutes."
+          },
+          "response": [
+            {
+              "name": "200 - Login Successful",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"user\": {\n      \"id\": 1,\n      \"email\": \"admin@clinic.local\",\n      \"role\": {\n        \"id\": 1,\n        \"name\": \"ADMIN\"\n      },\n      \"createdAt\": \"2026-03-28T00:00:00.000Z\",\n      \"updatedAt\": \"2026-03-28T00:00:00.000Z\"\n    }\n  },\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            },
+            {
+              "name": "401 - Invalid Credentials",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid email or password\",\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            },
+            {
+              "name": "423 - Account Locked",
+              "status": "Locked",
+              "code": 423,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Account temporarily locked due to multiple failed login attempts. Try again in 15 minutes.\",\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\",\n  \"errors\": [\n    {\n      \"remainingLockoutSeconds\": 843\n    }\n  ]\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "profile"]
+            },
+            "description": "Retrieve authenticated user's profile. Requires Bearer token."
+          },
+          "response": [
+            {
+              "name": "200 - Profile Fetched",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Profile fetched successfully\",\n  \"data\": {\n    \"id\": 1,\n    \"email\": \"admin@clinic.local\",\n    \"role\": {\n      \"id\": 1,\n      \"name\": \"ADMIN\"\n    },\n    \"createdAt\": \"2026-03-28T00:00:00.000Z\",\n    \"updatedAt\": \"2026-03-28T00:00:00.000Z\"\n  },\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Logout current user. JWT is discarded client-side."
+          },
+          "response": [
+            {
+              "name": "200 - Logout Successful",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Logout successful\",\n  \"data\": null,\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Patients",
+      "item": [
+        {
+          "name": "List Patients",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients?page=1&limit=20&includeDeleted=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "branchId", "value": "", "disabled": true },
+                {
+                  "key": "gender",
+                  "value": "",
+                  "description": "MALE | FEMALE | OTHER",
+                  "disabled": true
+                },
+                { "key": "includeDeleted", "value": "false" },
+                {
+                  "key": "registrationDateFrom",
+                  "value": "",
+                  "disabled": true
+                },
+                { "key": "registrationDateTo", "value": "", "disabled": true },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt",
+                  "description": "createdAt | updatedAt | registrationDate | fullName",
+                  "disabled": true
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "asc | desc",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List patients with pagination, search, and filtering. Soft-deleted patients excluded by default.\n\n**Access:** Any authenticated user."
+          },
+          "response": [
+            {
+              "name": "200 - Patients Listed",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Patients fetched successfully\",\n  \"data\": {\n    \"data\": [\n      {\n        \"id\": 1,\n        \"patientCode\": \"PAT-1711593600000-5847\",\n        \"fullName\": \"John Doe\",\n        \"dateOfBirth\": \"1990-05-15\",\n        \"gender\": \"MALE\",\n        \"branchId\": 1,\n        \"branch\": { \"id\": 1, \"name\": \"Downtown Clinic\", \"code\": \"DT-001\" },\n        \"registrationDate\": \"2026-03-28\",\n        \"phoneNumbers\": [],\n        \"address\": null,\n        \"emergencyContact\": null,\n        \"insuranceInfo\": null,\n        \"additionalInfo\": null,\n        \"deletedAt\": null,\n        \"createdAt\": \"2026-03-28T00:00:00.000Z\",\n        \"updatedAt\": \"2026-03-28T00:00:00.000Z\"\n      }\n    ],\n    \"pagination\": {\n      \"page\": 1,\n      \"limit\": 20,\n      \"total\": 1,\n      \"totalPages\": 1\n    }\n  },\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        },
+        {
+          "name": "Create Patient",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"John Doe\",\n  \"dateOfBirth\": \"1990-05-15\",\n  \"gender\": \"MALE\",\n  \"branchId\": 1,\n  \"registrationDate\": \"2026-03-28\",\n  \"contactDetails\": {\n    \"phoneNumber\": \"5551234567\",\n    \"businessPhone\": \"5559876543\"\n  },\n  \"address\": {\n    \"addressLine1\": \"123 Main St\",\n    \"addressLine2\": \"Apt 4B\",\n    \"city\": \"Toronto\",\n    \"province\": \"Ontario\",\n    \"postalCode\": \"M5V 3A8\"\n  },\n  \"emergencyContact\": {\n    \"fullName\": \"Jane Doe\",\n    \"relationship\": \"Spouse\",\n    \"contactNumber\": \"5559876543\"\n  },\n  \"insuranceInfo\": {\n    \"healthCardNumber\": \"1234567890\",\n    \"healthCardVisionCode\": \"VIS123\",\n    \"expiryDate\": \"2027-12-31\",\n    \"preferredDoctor\": \"Dr. Smith\"\n  },\n  \"additionalInfo\": {\n    \"guardian\": \"Parent Name\",\n    \"referredBy\": \"Dr. Johnson\",\n    \"patientNote\": \"Allergic to penicillin\"\n  },\n  \"duplicateOverride\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/patients",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients"]
+            },
+            "description": "Register a new patient with comprehensive profile information.\n\nDetects duplicate patients (same name, DOB, primary phone, branch). Set `duplicateOverride: true` to bypass.\n\n**Access:** ADMIN only.\n\n**Phone format:** Exactly 10 digits (no dashes/spaces)."
+          },
+          "response": [
+            {
+              "name": "201 - Patient Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Patient created successfully\",\n  \"data\": {\n    \"patient\": {\n      \"id\": 1,\n      \"patientCode\": \"PAT-1711593600000-5847\",\n      \"fullName\": \"John Doe\"\n    },\n    \"duplicateWarningAcknowledged\": false\n  },\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            },
+            {
+              "name": "409 - Duplicate Patient Detected",
+              "status": "Conflict",
+              "code": 409,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Potential duplicate patient detected\",\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\",\n  \"errors\": [\n    {\n      \"code\": \"DUPLICATE_PATIENT\",\n      \"message\": \"An active patient already exists with the same full name, date of birth, primary phone number, and branch.\",\n      \"existingPatient\": {\n        \"id\": 1,\n        \"patientCode\": \"PAT-1711593600000-5847\",\n        \"fullName\": \"John Doe\"\n      },\n      \"canOverride\": true\n    }\n  ]\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        },
+        {
+          "name": "Get Patient by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}?includeDeleted=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients", "{{patientId}}"],
+              "query": [{ "key": "includeDeleted", "value": "false" }]
+            },
+            "description": "Retrieve single patient details by ID.\n\n**Access:** Any authenticated user."
+          },
+          "response": [
+            {
+              "name": "200 - Patient Details",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Patient fetched successfully\",\n  \"data\": {\n    \"id\": 1,\n    \"patientCode\": \"PAT-1711593600000-5847\",\n    \"fullName\": \"John Doe\",\n    \"dateOfBirth\": \"1990-05-15\",\n    \"gender\": \"MALE\",\n    \"branchId\": 1,\n    \"branch\": { \"id\": 1, \"name\": \"Downtown Clinic\", \"code\": \"DT-001\" },\n    \"registrationDate\": \"2026-03-28\",\n    \"phoneNumbers\": [],\n    \"address\": null,\n    \"emergencyContact\": null,\n    \"insuranceInfo\": null,\n    \"additionalInfo\": null,\n    \"deletedAt\": null,\n    \"createdAt\": \"2026-03-28T00:00:00.000Z\",\n    \"updatedAt\": \"2026-03-28T00:00:00.000Z\"\n  },\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            },
+            {
+              "name": "404 - Patient Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Patient not found\",\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        },
+        {
+          "name": "Update Patient",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"John Doe Jr.\",\n  \"contactDetails\": {\n    \"phoneNumber\": \"5551234567\",\n    \"businessPhone\": \"5559876543\"\n  },\n  \"address\": {\n    \"addressLine1\": \"456 Oak Ave\",\n    \"city\": \"Mississauga\",\n    \"province\": \"Ontario\",\n    \"postalCode\": \"L5H 3A0\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients", "{{patientId}}"]
+            },
+            "description": "Update active patient. All fields optional. Pass `null` to remove nested objects (address, emergencyContact, etc.).\n\n**Access:** ADMIN, CASHIER, OPTOMETRIST."
+          },
+          "response": [
+            {
+              "name": "200 - Patient Updated",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Patient updated successfully\",\n  \"data\": {\n    \"patient\": { \"id\": 1, \"fullName\": \"John Doe Jr.\" },\n    \"duplicateWarningAcknowledged\": false\n  },\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        },
+        {
+          "name": "Soft Delete Patient",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Patient moved out of service area\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients", "{{patientId}}"]
+            },
+            "description": "Soft delete a patient (marks as deleted, preserves data). Records who deleted and reason.\n\n**Access:** ADMIN only.\n\n**Reason:** Optional, 3-500 characters."
+          },
+          "response": [
+            {
+              "name": "200 - Patient Deleted",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Patient deleted successfully\",\n  \"data\": {\n    \"id\": 1,\n    \"fullName\": \"John Doe\",\n    \"deletedAt\": \"2026-03-28T10:00:00.000Z\",\n    \"deletedBy\": 1,\n    \"deleteReason\": \"Patient moved out of service area\"\n  },\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        },
+        {
+          "name": "Restore Patient",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/restore",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients", "{{patientId}}", "restore"]
+            },
+            "description": "Restore a soft-deleted patient. Validates no active duplicate exists with same name/DOB/phone/branch.\n\n**Access:** ADMIN, CASHIER."
+          },
+          "response": [
+            {
+              "name": "200 - Patient Restored",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Patient restored successfully\",\n  \"data\": {\n    \"id\": 1,\n    \"fullName\": \"John Doe\",\n    \"deletedAt\": null,\n    \"deletedBy\": null,\n    \"deleteReason\": null\n  },\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            },
+            {
+              "name": "409 - Active Duplicate Exists",
+              "status": "Conflict",
+              "code": 409,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Cannot restore patient due to active duplicate\",\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\",\n  \"errors\": [\n    {\n      \"code\": \"ACTIVE_DUPLICATE_EXISTS\",\n      \"existingPatient\": { \"id\": 2, \"fullName\": \"John Doe\" }\n    }\n  ]\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Branches",
+      "item": [
+        {
+          "name": "List Branches",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/branches?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["branches"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "search", "value": "", "disabled": true },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt",
+                  "description": "name | code | createdAt | updatedAt",
+                  "disabled": true
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "asc | desc",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List branches with pagination and search.\n\n**Access:** ADMIN, CASHIER."
+          },
+          "response": [
+            {
+              "name": "200 - Branches Listed",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Branches fetched successfully\",\n  \"data\": {\n    \"data\": [\n      {\n        \"id\": 1,\n        \"name\": \"Downtown Clinic\",\n        \"code\": \"DT-001\",\n        \"address\": \"123 Main St, Toronto, ON M5V 3A8\",\n        \"_count\": { \"patients\": 5 },\n        \"createdAt\": \"2026-03-28T00:00:00.000Z\",\n        \"updatedAt\": \"2026-03-28T00:00:00.000Z\"\n      }\n    ],\n    \"pagination\": {\n      \"page\": 1,\n      \"limit\": 20,\n      \"total\": 1,\n      \"totalPages\": 1\n    }\n  },\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        },
+        {
+          "name": "Create Branch",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Downtown Clinic\",\n  \"code\": \"DT-001\",\n  \"address\": \"123 Main St, Toronto, ON M5V 3A8\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/branches",
+              "host": ["{{baseUrl}}"],
+              "path": ["branches"]
+            },
+            "description": "Create a new clinic branch.\n\n**Access:** ADMIN only.\n\n**Code format:** 2-30 chars (A-Z, 0-9, `-`, `_`). Auto-uppercased."
+          },
+          "response": [
+            {
+              "name": "201 - Branch Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Branch created successfully\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Downtown Clinic\",\n    \"code\": \"DT-001\",\n    \"address\": \"123 Main St, Toronto, ON M5V 3A8\",\n    \"_count\": { \"patients\": 0 },\n    \"createdAt\": \"2026-03-28T00:00:00.000Z\",\n    \"updatedAt\": \"2026-03-28T00:00:00.000Z\"\n  },\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            },
+            {
+              "name": "409 - Duplicate Code",
+              "status": "Conflict",
+              "code": 409,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Branch with code DT-001 already exists\",\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        },
+        {
+          "name": "Get Branch by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/branches/{{branchId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["branches", "{{branchId}}"]
+            },
+            "description": "Retrieve branch details with patient statistics.\n\n**Access:** ADMIN, CASHIER."
+          },
+          "response": [
+            {
+              "name": "200 - Branch Details",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Branch fetched successfully\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Downtown Clinic\",\n    \"code\": \"DT-001\",\n    \"address\": \"123 Main St, Toronto, ON M5V 3A8\",\n    \"_count\": { \"patients\": 5 },\n    \"patientStats\": {\n      \"active\": 4,\n      \"deleted\": 1,\n      \"total\": 5\n    },\n    \"createdAt\": \"2026-03-28T00:00:00.000Z\",\n    \"updatedAt\": \"2026-03-28T00:00:00.000Z\"\n  },\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        },
+        {
+          "name": "Update Branch",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Downtown Clinic - Main\",\n  \"address\": \"456 Oak Ave, Toronto, ON M5H 2N2\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/branches/{{branchId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["branches", "{{branchId}}"]
+            },
+            "description": "Update branch information. At least one field required.\n\n**Access:** ADMIN, CASHIER."
+          },
+          "response": [
+            {
+              "name": "200 - Branch Updated",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Branch updated successfully\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Downtown Clinic - Main\",\n    \"code\": \"DT-001\",\n    \"address\": \"456 Oak Ave, Toronto, ON M5H 2N2\"\n  },\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        },
+        {
+          "name": "Delete Branch",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/branches/{{branchId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["branches", "{{branchId}}"]
+            },
+            "description": "Delete branch. Only allowed if no patients are linked.\n\n**Access:** ADMIN only."
+          },
+          "response": [
+            {
+              "name": "200 - Branch Deleted",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Branch deleted successfully\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Downtown Clinic\",\n    \"code\": \"DT-001\"\n  },\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            },
+            {
+              "name": "409 - Has Linked Patients",
+              "status": "Conflict",
+              "code": 409,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Cannot delete branch with linked patients\",\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "item": [
+        {
+          "name": "List Roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roles?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "search", "value": "", "disabled": true },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt",
+                  "description": "name | createdAt | updatedAt",
+                  "disabled": true
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "asc | desc",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all roles with pagination and search.\n\n**Access:** ADMIN only."
+          },
+          "response": [
+            {
+              "name": "200 - Roles Listed",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Roles fetched successfully\",\n  \"data\": {\n    \"data\": [\n      {\n        \"id\": 1,\n        \"name\": \"ADMIN\",\n        \"_count\": { \"users\": 1 },\n        \"createdAt\": \"2026-03-28T00:00:00.000Z\",\n        \"updatedAt\": \"2026-03-28T00:00:00.000Z\"\n      },\n      {\n        \"id\": 2,\n        \"name\": \"CASHIER\",\n        \"_count\": { \"users\": 0 },\n        \"createdAt\": \"2026-03-28T00:00:00.000Z\",\n        \"updatedAt\": \"2026-03-28T00:00:00.000Z\"\n      },\n      {\n        \"id\": 3,\n        \"name\": \"OPTOMETRIST\",\n        \"_count\": { \"users\": 1 },\n        \"createdAt\": \"2026-03-28T00:00:00.000Z\",\n        \"updatedAt\": \"2026-03-28T00:00:00.000Z\"\n      }\n    ],\n    \"pagination\": {\n      \"page\": 1,\n      \"limit\": 20,\n      \"total\": 3,\n      \"totalPages\": 1\n    }\n  },\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        },
+        {
+          "name": "Create Role",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"OPTOMETRIST\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/roles",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles"]
+            },
+            "description": "Create a new role. System roles (ADMIN, CASHIER) cannot be created via this endpoint.\n\n**Access:** ADMIN only.\n\n**Name format:** 2-50 chars, starts with letter, A-Z/0-9/underscore. Auto-uppercased."
+          },
+          "response": [
+            {
+              "name": "201 - Role Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Role created successfully\",\n  \"data\": {\n    \"id\": 3,\n    \"name\": \"OPTOMETRIST\",\n    \"_count\": { \"users\": 0 },\n    \"createdAt\": \"2026-03-28T00:00:00.000Z\",\n    \"updatedAt\": \"2026-03-28T00:00:00.000Z\"\n  },\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            },
+            {
+              "name": "409 - Role Already Exists",
+              "status": "Conflict",
+              "code": 409,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Role OPTOMETRIST already exists\",\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        },
+        {
+          "name": "Get Role by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roles/{{roleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles", "{{roleId}}"]
+            },
+            "description": "Retrieve specific role.\n\n**Access:** ADMIN only."
+          },
+          "response": [
+            {
+              "name": "200 - Role Details",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Role fetched successfully\",\n  \"data\": {\n    \"id\": 3,\n    \"name\": \"OPTOMETRIST\",\n    \"_count\": { \"users\": 1 },\n    \"createdAt\": \"2026-03-28T00:00:00.000Z\",\n    \"updatedAt\": \"2026-03-28T00:00:00.000Z\"\n  },\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"SENIOR_OPTOMETRIST\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/roles/{{roleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles", "{{roleId}}"]
+            },
+            "description": "Update role name. System roles (ADMIN, CASHIER) cannot be renamed.\n\n**Access:** ADMIN only."
+          },
+          "response": [
+            {
+              "name": "200 - Role Updated",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Role updated successfully\",\n  \"data\": {\n    \"id\": 3,\n    \"name\": \"SENIOR_OPTOMETRIST\",\n    \"_count\": { \"users\": 1 },\n    \"createdAt\": \"2026-03-28T00:00:00.000Z\",\n    \"updatedAt\": \"2026-03-28T00:00:00.000Z\"\n  },\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            },
+            {
+              "name": "400 - System Role Cannot Be Renamed",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"success\": false,\n  \"message\": \"System role ADMIN cannot be renamed\",\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roles/{{roleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles", "{{roleId}}"]
+            },
+            "description": "Delete role. System roles (ADMIN, CASHIER) cannot be deleted. Role must have no assigned users.\n\n**Access:** ADMIN only."
+          },
+          "response": [
+            {
+              "name": "200 - Role Deleted",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Role deleted successfully\",\n  \"data\": {\n    \"id\": 3,\n    \"name\": \"OPTOMETRIST\"\n  },\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            },
+            {
+              "name": "400 - System Role Cannot Be Deleted",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"success\": false,\n  \"message\": \"System role ADMIN cannot be deleted\",\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            },
+            {
+              "name": "409 - Has Assigned Users",
+              "status": "Conflict",
+              "code": 409,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Cannot delete role assigned to users\",\n  \"timestamp\": \"2026-03-28T10:00:00.000Z\"\n}",
+              "header": [{ "key": "Content-Type", "value": "application/json" }]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

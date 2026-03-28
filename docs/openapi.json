@@ -1,0 +1,1832 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Retail Optical Clinic Management System API",
+    "description": "REST API for managing patients, branches, roles, and authentication in an optical clinic management system. Supports JWT-based authentication with role-based access control (ADMIN, CASHIER, OPTOMETRIST).",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Optical Clinic Dev Team"
+    },
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000/api/v1",
+      "description": "Local development server"
+    }
+  ],
+  "tags": [
+    { "name": "Health", "description": "Server health check" },
+    { "name": "Auth", "description": "Authentication & session management" },
+    {
+      "name": "Patients",
+      "description": "Patient CRUD with soft-delete/restore and duplicate detection"
+    },
+    { "name": "Branches", "description": "Clinic branch management" },
+    { "name": "Roles", "description": "User role management (ADMIN only)" }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health check",
+        "description": "Returns server status, environment, and uptime.",
+        "operationId": "healthCheck",
+        "responses": {
+          "200": {
+            "description": "Server is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "OK" },
+                    "message": {
+                      "type": "string",
+                      "example": "Retail Optical Clinic Management API is running"
+                    },
+                    "timestamp": { "type": "string", "format": "date-time" },
+                    "environment": {
+                      "type": "string",
+                      "example": "development"
+                    },
+                    "uptime": { "type": "number", "example": 12345.67 }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login",
+        "description": "Authenticate user with email and password. Returns JWT token. Tracks login attempts with IP and User-Agent. Account locks after 5 failed attempts in 15 minutes.",
+        "operationId": "login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/LoginData" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid email or password",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "423": {
+            "description": "Account locked due to multiple failed login attempts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/ErrorResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "errors": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "remainingLockoutSeconds": {
+                                "type": "integer",
+                                "example": 843
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/profile": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Get profile",
+        "description": "Retrieve authenticated user's profile information.",
+        "operationId": "getProfile",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Profile fetched successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/UserProfile" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Logout",
+        "description": "Logout current user. JWT is discarded client-side.",
+        "operationId": "logout",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Logout successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "type": "null" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/patients": {
+      "get": {
+        "tags": ["Patients"],
+        "summary": "List patients",
+        "description": "List patients with pagination, searching, and filtering. Soft-deleted patients excluded by default.",
+        "operationId": "listPatients",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 1, "default": 1 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search by fullName, patientCode, or phone number",
+            "schema": { "type": "string", "maxLength": 150 }
+          },
+          {
+            "name": "branchId",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 1 }
+          },
+          {
+            "name": "gender",
+            "in": "query",
+            "schema": { "$ref": "#/components/schemas/Gender" }
+          },
+          {
+            "name": "includeDeleted",
+            "in": "query",
+            "schema": { "type": "boolean", "default": false }
+          },
+          {
+            "name": "registrationDateFrom",
+            "in": "query",
+            "schema": { "type": "string", "format": "date" }
+          },
+          {
+            "name": "registrationDateTo",
+            "in": "query",
+            "schema": { "type": "string", "format": "date" }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "updatedAt",
+                "registrationDate",
+                "fullName"
+              ],
+              "default": "createdAt"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["asc", "desc"],
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Patients fetched successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "data": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/Patient"
+                              }
+                            },
+                            "pagination": {
+                              "$ref": "#/components/schemas/Pagination"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Patients"],
+        "summary": "Create patient",
+        "description": "Register a new patient. Detects duplicates by name, DOB, primary phone, and branch. ADMIN only.",
+        "operationId": "createPatient",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreatePatientRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Patient created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "patient": {
+                              "$ref": "#/components/schemas/Patient"
+                            },
+                            "duplicateWarningAcknowledged": {
+                              "type": "boolean"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": {
+            "description": "Branch not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate patient detected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/ErrorResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "errors": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/DuplicatePatientError"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/patients/{id}": {
+      "get": {
+        "tags": ["Patients"],
+        "summary": "Get patient by ID",
+        "description": "Retrieve single patient details by ID.",
+        "operationId": "getPatientById",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/PatientId" },
+          {
+            "name": "includeDeleted",
+            "in": "query",
+            "schema": { "type": "boolean", "default": false }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Patient fetched successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Patient" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": {
+            "description": "Patient not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Patients"],
+        "summary": "Update patient",
+        "description": "Update active patient information. All fields optional. ADMIN, CASHIER, or OPTOMETRIST.",
+        "operationId": "updatePatient",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PatientId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdatePatientRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Patient updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "patient": {
+                              "$ref": "#/components/schemas/Patient"
+                            },
+                            "duplicateWarningAcknowledged": {
+                              "type": "boolean"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": {
+            "description": "Active patient not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate or constraint conflict",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Patients"],
+        "summary": "Soft delete patient",
+        "description": "Soft delete a patient (marks as deleted, preserves data). Records who deleted and reason. ADMIN only.",
+        "operationId": "deletePatient",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PatientId" }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 500,
+                    "description": "Reason for deleting the patient"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Patient deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Patient" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": {
+            "description": "Active patient not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/patients/{id}/restore": {
+      "post": {
+        "tags": ["Patients"],
+        "summary": "Restore patient",
+        "description": "Restore a soft-deleted patient. Validates no active duplicate exists. ADMIN or CASHIER.",
+        "operationId": "restorePatient",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/PatientId" }],
+        "responses": {
+          "200": {
+            "description": "Patient restored successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Patient" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": {
+            "description": "Deleted patient not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "409": {
+            "description": "Active duplicate exists — cannot restore",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/ErrorResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "errors": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "code": {
+                                "type": "string",
+                                "example": "ACTIVE_DUPLICATE_EXISTS"
+                              },
+                              "existingPatient": { "type": "object" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/branches": {
+      "get": {
+        "tags": ["Branches"],
+        "summary": "List branches",
+        "description": "List branches with pagination and search. ADMIN or CASHIER.",
+        "operationId": "listBranches",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 1, "default": 1 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search by name, code, or address",
+            "schema": { "type": "string", "maxLength": 120 }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["name", "code", "createdAt", "updatedAt"],
+              "default": "createdAt"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["asc", "desc"],
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Branches fetched successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "data": {
+                              "type": "array",
+                              "items": { "$ref": "#/components/schemas/Branch" }
+                            },
+                            "pagination": {
+                              "$ref": "#/components/schemas/Pagination"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "tags": ["Branches"],
+        "summary": "Create branch",
+        "description": "Create a new clinic branch. ADMIN only.",
+        "operationId": "createBranch",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateBranchRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Branch created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Branch" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": {
+            "description": "Branch code already exists",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/branches/{id}": {
+      "get": {
+        "tags": ["Branches"],
+        "summary": "Get branch by ID",
+        "description": "Retrieve branch details with patient statistics. ADMIN or CASHIER.",
+        "operationId": "getBranchById",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/BranchId" }],
+        "responses": {
+          "200": {
+            "description": "Branch fetched successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "allOf": [
+                            { "$ref": "#/components/schemas/Branch" },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "patientStats": {
+                                  "type": "object",
+                                  "properties": {
+                                    "active": { "type": "integer" },
+                                    "deleted": { "type": "integer" },
+                                    "total": { "type": "integer" }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": {
+            "description": "Branch not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Branches"],
+        "summary": "Update branch",
+        "description": "Update branch information. At least one field required. ADMIN or CASHIER.",
+        "operationId": "updateBranch",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/BranchId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateBranchRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Branch updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Branch" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": {
+            "description": "Branch not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "409": {
+            "description": "Branch code already exists",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Branches"],
+        "summary": "Delete branch",
+        "description": "Delete branch. Only if no linked patients. ADMIN only.",
+        "operationId": "deleteBranch",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/BranchId" }],
+        "responses": {
+          "200": {
+            "description": "Branch deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "id": { "type": "integer" },
+                            "name": { "type": "string" },
+                            "code": { "type": "string" }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": {
+            "description": "Branch not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "409": {
+            "description": "Cannot delete branch with linked patients",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/roles": {
+      "get": {
+        "tags": ["Roles"],
+        "summary": "List roles",
+        "description": "List all roles with pagination and search. ADMIN only.",
+        "operationId": "listRoles",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 1, "default": 1 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": { "type": "string", "maxLength": 50 }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["name", "createdAt", "updatedAt"],
+              "default": "createdAt"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["asc", "desc"],
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Roles fetched successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "data": {
+                              "type": "array",
+                              "items": { "$ref": "#/components/schemas/Role" }
+                            },
+                            "pagination": {
+                              "$ref": "#/components/schemas/Pagination"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "tags": ["Roles"],
+        "summary": "Create role",
+        "description": "Create a new role. System roles (ADMIN, CASHIER) cannot be created. ADMIN only.",
+        "operationId": "createRole",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateRoleRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Role created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Role" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": {
+            "description": "Role already exists",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/roles/{id}": {
+      "get": {
+        "tags": ["Roles"],
+        "summary": "Get role by ID",
+        "description": "Retrieve specific role. ADMIN only.",
+        "operationId": "getRoleById",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/RoleId" }],
+        "responses": {
+          "200": {
+            "description": "Role fetched successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Role" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": {
+            "description": "Role not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Roles"],
+        "summary": "Update role",
+        "description": "Update role name. System roles (ADMIN, CASHIER) cannot be renamed. ADMIN only.",
+        "operationId": "updateRole",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/RoleId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateRoleRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Role updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Role" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "System role cannot be renamed / Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": {
+            "description": "Role not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "409": {
+            "description": "Role name already exists",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Roles"],
+        "summary": "Delete role",
+        "description": "Delete role. System roles cannot be deleted. Role must have no assigned users. ADMIN only.",
+        "operationId": "deleteRole",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/RoleId" }],
+        "responses": {
+          "200": {
+            "description": "Role deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/SuccessResponse" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "id": { "type": "integer" },
+                            "name": { "type": "string" }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "System role cannot be deleted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": {
+            "description": "Role not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "409": {
+            "description": "Cannot delete role assigned to users",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token obtained from POST /auth/login"
+      }
+    },
+    "parameters": {
+      "PatientId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer", "minimum": 1 },
+        "description": "Patient ID"
+      },
+      "BranchId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer", "minimum": 1 },
+        "description": "Branch ID"
+      },
+      "RoleId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer", "minimum": 1 },
+        "description": "Role ID"
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing or invalid authentication token",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Insufficient permissions for this action",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Request validation failed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                { "$ref": "#/components/schemas/ErrorResponse" },
+                {
+                  "type": "object",
+                  "properties": {
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "field": { "type": "string" },
+                          "message": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "message": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "message": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer", "example": 1 },
+          "limit": { "type": "integer", "example": 20 },
+          "total": { "type": "integer", "example": 45 },
+          "totalPages": { "type": "integer", "example": 3 }
+        }
+      },
+      "Gender": {
+        "type": "string",
+        "enum": ["MALE", "FEMALE", "OTHER"]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 255,
+            "example": "admin@clinic.local"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "example": "Admin@12345"
+          }
+        }
+      },
+      "LoginData": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "user": { "$ref": "#/components/schemas/UserProfile" }
+        }
+      },
+      "UserProfile": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "admin@clinic.local"
+          },
+          "role": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer", "example": 1 },
+              "name": { "type": "string", "example": "ADMIN" }
+            }
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ContactDetails": {
+        "type": "object",
+        "required": ["phoneNumber"],
+        "properties": {
+          "phoneNumber": {
+            "type": "string",
+            "pattern": "^[0-9]{10}$",
+            "description": "Primary phone — exactly 10 digits",
+            "example": "5551234567"
+          },
+          "businessPhone": {
+            "type": "string",
+            "pattern": "^[0-9]{10}$",
+            "nullable": true,
+            "example": "5559876543"
+          },
+          "additionalPhone": {
+            "type": "string",
+            "pattern": "^[0-9]{10}$",
+            "nullable": true,
+            "example": "5555555555"
+          }
+        }
+      },
+      "Address": {
+        "type": "object",
+        "properties": {
+          "addressLine1": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 255,
+            "example": "123 Main St"
+          },
+          "addressLine2": {
+            "type": "string",
+            "maxLength": 255,
+            "nullable": true,
+            "example": "Apt 4B"
+          },
+          "city": {
+            "type": "string",
+            "maxLength": 120,
+            "nullable": true,
+            "example": "Toronto"
+          },
+          "province": {
+            "type": "string",
+            "maxLength": 120,
+            "nullable": true,
+            "example": "Ontario"
+          },
+          "postalCode": {
+            "type": "string",
+            "maxLength": 20,
+            "nullable": true,
+            "example": "M5V 3A8"
+          }
+        }
+      },
+      "EmergencyContact": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150,
+            "example": "Jane Doe"
+          },
+          "relationship": {
+            "type": "string",
+            "maxLength": 100,
+            "nullable": true,
+            "example": "Spouse"
+          },
+          "contactNumber": {
+            "type": "string",
+            "pattern": "^[0-9]{10}$",
+            "example": "5559876543"
+          },
+          "addressLine1": {
+            "type": "string",
+            "maxLength": 255,
+            "nullable": true
+          },
+          "addressLine2": {
+            "type": "string",
+            "maxLength": 255,
+            "nullable": true
+          },
+          "city": { "type": "string", "maxLength": 120, "nullable": true },
+          "province": { "type": "string", "maxLength": 120, "nullable": true },
+          "postalCode": { "type": "string", "maxLength": 20, "nullable": true }
+        }
+      },
+      "InsuranceInfo": {
+        "type": "object",
+        "properties": {
+          "healthCardNumber": {
+            "type": "string",
+            "maxLength": 60,
+            "nullable": true,
+            "example": "1234567890"
+          },
+          "healthCardVisionCode": {
+            "type": "string",
+            "maxLength": 20,
+            "nullable": true,
+            "example": "VIS123"
+          },
+          "expiryDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "example": "2027-12-31"
+          },
+          "preferredDoctor": {
+            "type": "string",
+            "maxLength": 150,
+            "nullable": true,
+            "example": "Dr. Smith"
+          }
+        }
+      },
+      "AdditionalInfo": {
+        "type": "object",
+        "properties": {
+          "guardian": {
+            "type": "string",
+            "maxLength": 150,
+            "nullable": true,
+            "example": "Parent Name"
+          },
+          "referredBy": {
+            "type": "string",
+            "maxLength": 150,
+            "nullable": true,
+            "example": "Dr. Johnson"
+          },
+          "patientNote": {
+            "type": "string",
+            "maxLength": 5000,
+            "nullable": true,
+            "example": "Allergic to penicillin"
+          }
+        }
+      },
+      "CreatePatientRequest": {
+        "type": "object",
+        "required": [
+          "fullName",
+          "dateOfBirth",
+          "gender",
+          "branchId",
+          "contactDetails"
+        ],
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150,
+            "example": "John Doe"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date",
+            "example": "1990-05-15"
+          },
+          "gender": { "$ref": "#/components/schemas/Gender" },
+          "branchId": { "type": "integer", "minimum": 1, "example": 1 },
+          "registrationDate": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-03-28"
+          },
+          "contactDetails": { "$ref": "#/components/schemas/ContactDetails" },
+          "address": {
+            "allOf": [{ "$ref": "#/components/schemas/Address" }],
+            "nullable": true
+          },
+          "emergencyContact": {
+            "allOf": [{ "$ref": "#/components/schemas/EmergencyContact" }],
+            "nullable": true
+          },
+          "insuranceInfo": {
+            "allOf": [{ "$ref": "#/components/schemas/InsuranceInfo" }],
+            "nullable": true
+          },
+          "additionalInfo": {
+            "allOf": [{ "$ref": "#/components/schemas/AdditionalInfo" }],
+            "nullable": true
+          },
+          "duplicateOverride": {
+            "type": "boolean",
+            "default": false,
+            "description": "Set true to bypass duplicate check"
+          }
+        }
+      },
+      "UpdatePatientRequest": {
+        "type": "object",
+        "properties": {
+          "fullName": { "type": "string", "minLength": 2, "maxLength": 150 },
+          "dateOfBirth": { "type": "string", "format": "date" },
+          "gender": { "$ref": "#/components/schemas/Gender" },
+          "branchId": { "type": "integer", "minimum": 1 },
+          "registrationDate": { "type": "string", "format": "date" },
+          "contactDetails": { "$ref": "#/components/schemas/ContactDetails" },
+          "address": {
+            "allOf": [{ "$ref": "#/components/schemas/Address" }],
+            "nullable": true
+          },
+          "emergencyContact": {
+            "allOf": [{ "$ref": "#/components/schemas/EmergencyContact" }],
+            "nullable": true
+          },
+          "insuranceInfo": {
+            "allOf": [{ "$ref": "#/components/schemas/InsuranceInfo" }],
+            "nullable": true
+          },
+          "additionalInfo": {
+            "allOf": [{ "$ref": "#/components/schemas/AdditionalInfo" }],
+            "nullable": true
+          },
+          "duplicateOverride": { "type": "boolean", "default": false }
+        }
+      },
+      "Patient": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "patientCode": {
+            "type": "string",
+            "example": "PAT-1711593600000-5847"
+          },
+          "fullName": { "type": "string", "example": "John Doe" },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date",
+            "example": "1990-05-15"
+          },
+          "gender": { "$ref": "#/components/schemas/Gender" },
+          "branchId": { "type": "integer", "example": 1 },
+          "branch": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer" },
+              "name": { "type": "string", "example": "Downtown Clinic" },
+              "code": { "type": "string", "example": "DT-001" }
+            }
+          },
+          "registrationDate": { "type": "string", "format": "date" },
+          "phoneNumbers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "patientId": { "type": "integer" },
+                "phoneType": {
+                  "type": "string",
+                  "enum": ["MOBILE", "BUSINESS", "ADDITIONAL"]
+                },
+                "phoneNumber": { "type": "string" },
+                "isPrimary": { "type": "boolean" },
+                "createdAt": { "type": "string", "format": "date-time" },
+                "updatedAt": { "type": "string", "format": "date-time" }
+              }
+            }
+          },
+          "address": {
+            "allOf": [
+              { "$ref": "#/components/schemas/Address" },
+              {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "integer" },
+                  "patientId": { "type": "integer" },
+                  "createdAt": { "type": "string", "format": "date-time" },
+                  "updatedAt": { "type": "string", "format": "date-time" }
+                }
+              }
+            ],
+            "nullable": true
+          },
+          "emergencyContact": {
+            "allOf": [
+              { "$ref": "#/components/schemas/EmergencyContact" },
+              {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "integer" },
+                  "patientId": { "type": "integer" },
+                  "createdAt": { "type": "string", "format": "date-time" },
+                  "updatedAt": { "type": "string", "format": "date-time" }
+                }
+              }
+            ],
+            "nullable": true
+          },
+          "insuranceInfo": {
+            "allOf": [
+              { "$ref": "#/components/schemas/InsuranceInfo" },
+              {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "integer" },
+                  "patientId": { "type": "integer" },
+                  "createdAt": { "type": "string", "format": "date-time" },
+                  "updatedAt": { "type": "string", "format": "date-time" }
+                }
+              }
+            ],
+            "nullable": true
+          },
+          "additionalInfo": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AdditionalInfo" },
+              {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "integer" },
+                  "patientId": { "type": "integer" },
+                  "createdAt": { "type": "string", "format": "date-time" },
+                  "updatedAt": { "type": "string", "format": "date-time" }
+                }
+              }
+            ],
+            "nullable": true
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "deletedBy": { "type": "integer", "nullable": true },
+          "deleteReason": { "type": "string", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "DuplicatePatientError": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "example": "DUPLICATE_PATIENT" },
+          "message": { "type": "string" },
+          "existingPatient": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer" },
+              "patientCode": { "type": "string" },
+              "fullName": { "type": "string" },
+              "dateOfBirth": { "type": "string", "format": "date" },
+              "branchId": { "type": "integer" },
+              "phoneNumbers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "phoneNumber": { "type": "string" },
+                    "phoneType": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "canOverride": { "type": "boolean", "example": true }
+        }
+      },
+      "Branch": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "name": { "type": "string", "example": "Downtown Clinic" },
+          "code": { "type": "string", "example": "DT-001" },
+          "address": {
+            "type": "string",
+            "nullable": true,
+            "example": "123 Main St, Toronto, ON M5V 3A8"
+          },
+          "_count": {
+            "type": "object",
+            "properties": {
+              "patients": { "type": "integer", "example": 5 }
+            }
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateBranchRequest": {
+        "type": "object",
+        "required": ["name", "code"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120,
+            "example": "Downtown Clinic"
+          },
+          "code": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 30,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "description": "Auto-uppercased. Only A-Z, 0-9, hyphen, underscore.",
+            "example": "DT-001"
+          },
+          "address": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2000,
+            "nullable": true,
+            "example": "123 Main St, Toronto, ON M5V 3A8"
+          }
+        }
+      },
+      "UpdateBranchRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+          "code": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 30,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "address": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2000,
+            "nullable": true
+          }
+        },
+        "description": "At least one field is required."
+      },
+      "Role": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "name": { "type": "string", "example": "ADMIN" },
+          "_count": {
+            "type": "object",
+            "properties": {
+              "users": { "type": "integer", "example": 3 }
+            }
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateRoleRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50,
+            "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+            "description": "Must start with a letter. Only A-Z, 0-9, underscore. Auto-uppercased.",
+            "example": "OPTOMETRIST"
+          }
+        }
+      }
+    }
+  }
+}

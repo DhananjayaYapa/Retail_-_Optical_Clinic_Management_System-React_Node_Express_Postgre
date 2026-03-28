@@ -63,4 +63,21 @@ export const authActions = {
       }
     }
   },
+  validateSession: () => {
+    return async (dispatch: AppDispatch) => {
+      try {
+        const data = await authService.getProfile()
+        dispatch(
+          authActions.setProfile({
+            userId: String(data.id),
+            email: data.email,
+            name: data.email,
+            role: data.role?.name,
+          })
+        )
+      } catch {
+        dispatch(authActions.logout())
+      }
+    }
+  },
 }
