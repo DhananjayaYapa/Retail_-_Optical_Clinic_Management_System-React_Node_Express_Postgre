@@ -55,10 +55,6 @@ export const initialAuthState: AuthStateDto = {
   token: null,
 }
 
-// ============================================
-// CONTROLLED FORM DTOs (Athena Pattern)
-// ============================================
-
 // Profile Form DTO
 export interface ProfileFormDto {
   name: {
@@ -103,7 +99,10 @@ export interface PasswordFormDto {
 }
 
 // Initial states for Profile forms
-export const INITIAL_PROFILE_FORM_STATE = (name: string = '', email: string = ''): ProfileFormDto => ({
+export const INITIAL_PROFILE_FORM_STATE = (
+  name: string = '',
+  email: string = ''
+): ProfileFormDto => ({
   name: {
     value: name,
     validator: 'text',

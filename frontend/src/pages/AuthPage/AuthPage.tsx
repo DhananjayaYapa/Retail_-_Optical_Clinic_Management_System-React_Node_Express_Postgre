@@ -5,6 +5,7 @@ import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/ma
 import { authActions } from '../../redux/actions'
 import { APP_ROUTES } from '../../utilities/constants'
 import type { AppDispatch } from '../../redux/store'
+import loginBg from '../../assets/images/login-bg.svg'
 
 const AuthPage = () => {
   const dispatch = useDispatch<AppDispatch>()
@@ -38,36 +39,85 @@ const AuthPage = () => {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', p: 2 }}>
-      <Paper sx={{ width: '100%', maxWidth: 420, p: 3, borderRadius: 2 }}>
-        <Stack spacing={2}>
-          <Typography variant="h5" sx={{ fontWeight: 700 }}>
-            Clinic Login
-          </Typography>
-          <Typography color="text.secondary">Base setup login screen.</Typography>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+        bgcolor: '#0d0931',
+        p: 2,
+      }}
+    >
+      {/* SVG background */}
+      <Box
+        component="img"
+        src={loginBg}
+        alt=""
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          pointerEvents: 'none',
+        }}
+      />
 
-          {error && <Alert severity="error">{error}</Alert>}
+      <Box
+        sx={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: 1100,
+          display: 'flex',
+          justifyContent: 'flex-end',
+        }}
+      >
+        <Paper
+          elevation={8}
+          sx={{
+            width: '100%',
+            maxWidth: 420,
+            p: 4,
+            borderRadius: 3,
+            bgcolor: 'rgba(13, 9, 49, 0.85)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(123, 163, 224, 0.2)',
+          }}
+        >
+          <Stack spacing={2.5}>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+              Clinic Login
+            </Typography>
+            <Typography color="text.secondary" variant="body2">
+              Sign in to access the clinic management system.
+            </Typography>
 
-          <TextField
-            label="Email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            type="email"
-            fullWidth
-          />
-          <TextField
-            label="Password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            type="password"
-            fullWidth
-          />
+            {error && <Alert severity="error">{error}</Alert>}
 
-          <Button variant="contained" onClick={onLogin}>
-            Login
-          </Button>
-        </Stack>
-      </Paper>
+            <TextField
+              label="Email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              type="email"
+              fullWidth
+            />
+            <TextField
+              label="Password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              type="password"
+              fullWidth
+            />
+
+            <Button variant="contained" size="large" onClick={onLogin}>
+              Login
+            </Button>
+          </Stack>
+        </Paper>
+      </Box>
     </Box>
   )
 }
