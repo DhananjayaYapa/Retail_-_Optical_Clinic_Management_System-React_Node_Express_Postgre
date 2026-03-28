@@ -8,9 +8,13 @@ import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined'
 import WcOutlinedIcon from '@mui/icons-material/WcOutlined'
 import { Avatar, Box, Button, Chip, Divider, Paper, Switch, Typography } from '@mui/material'
 import type { PatientFullApiRecord } from '../../../utilities/models'
+import { getDisplayName, getInitials } from '../../../utilities/helpers/patient.helpers'
+import { DUMMY_VISITS } from '../../../utilities/constants/patient.constants'
 
 interface PatientProfileProps {
   patient: PatientFullApiRecord
+  onToggleStatus?: (patient: PatientFullApiRecord) => void
+  canToggleStatus?: boolean
 }
 
 const InfoItem = ({ label, value }: { label: string; value: string }) => (
@@ -23,31 +27,6 @@ const InfoItem = ({ label, value }: { label: string; value: string }) => (
     </Typography>
   </Box>
 )
-
-const DUMMY_VISITS = [
-  { date: '2026-03-15', doctor: 'Dr. Smith', reason: 'Routine Eye Exam' },
-  { date: '2026-01-22', doctor: 'Dr. Johnson', reason: 'Contact Lens Fitting' },
-  { date: '2025-11-08', doctor: 'Dr. Smith', reason: 'Follow-up Visit' },
-  { date: '2025-08-30', doctor: 'Dr. Patel', reason: 'Glaucoma Screening' },
-]
-
-const getInitials = (fullName: string): string => {
-  const parts = fullName.trim().split(/\s+/)
-  const titles = ['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.']
-  const filtered = parts.filter((p) => !titles.includes(p))
-  const first = filtered[0]?.[0] || ''
-  const last = filtered.length > 1 ? filtered[filtered.length - 1][0] : ''
-  return (first + last).toUpperCase()
-}
-
-const getDisplayName = (fullName: string): string => {
-  const parts = fullName.trim().split(/\s+/)
-  const titles = ['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.']
-  const filtered = parts.filter((p) => !titles.includes(p))
-  const first = filtered[0] || ''
-  const last = filtered.length > 1 ? filtered[filtered.length - 1] : ''
-  return [first, last].filter(Boolean).join(' ')
-}
 
 const btnSx = { textTransform: 'none', fontSize: '0.7rem', py: 0.25, px: 1 } as const
 const qIconSx = { fontSize: 14 } as const
@@ -69,7 +48,11 @@ const QuickInfo = ({
   </Box>
 )
 
-const PatientProfile = ({ patient }: PatientProfileProps) => {
+const PatientProfile = ({
+  patient,
+  onToggleStatus,
+  canToggleStatus = true,
+}: PatientProfileProps) => {
   const initials = getInitials(patient.fullName)
   const displayName = getDisplayName(patient.fullName)
   const isActive = !patient.deletedAt
@@ -130,7 +113,9 @@ const PatientProfile = ({ patient }: PatientProfileProps) => {
             variant={isActive ? 'filled' : 'outlined'}
             sx={{ height: 20, fontSize: '0.7rem' }}
           />
-          <Switch checked={isActive} size="small" disabled />
+          {canToggleStatus && (
+            <Switch checked={isActive} size="small" onChange={() => onToggleStatus?.(patient)} />
+          )}
         </Box>
       </Box>
 

@@ -1,132 +1,311 @@
-import type {
-  BranchListItem,
-  PatientFullApiRecord,
-  PatientListItem,
-  PatientListResponse,
-  PaginationMeta,
-} from '../../utilities/models'
-import { PATIENT_ACTIONS } from '../actions/patient.actions'
+import { COMMON_ACTION_TYPES, PATIENT_ACTION_TYPES } from '../../utilities/constants'
 
-export interface PatientState {
-  rows: PatientListItem[]
-  pagination: PaginationMeta
-  isLoading: boolean
-  isCreating: boolean
-  isUpdating: boolean
-  isFetchingPatient: boolean
-  editingPatient: PatientFullApiRecord | null
-  branches: BranchListItem[]
-  error: string | null
-}
-
-const initialState: PatientState = {
-  rows: [],
-  pagination: {
-    page: 1,
-    limit: 20,
-    total: 0,
-    totalPages: 0,
+const INITIAL_STATE = {
+  fetchPatients: {
+    isLoading: false,
+    data: [],
+    error: null,
   },
-  isLoading: false,
-  isCreating: false,
-  isUpdating: false,
-  isFetchingPatient: false,
-  editingPatient: null,
-  branches: [],
-  error: null,
-}
-
-interface PatientAction {
-  type: string
+  createPatient: {
+    isLoading: false,
+    data: [],
+    error: null,
+    success: false,
+  },
+  fetchPatientById: {
+    isLoading: false,
+    data: null,
+    error: null,
+  },
+  updatePatient: {
+    isLoading: false,
+    data: [],
+    error: null,
+    success: false,
+  },
+  deletePatient: {
+    isLoading: false,
+    data: [],
+    error: null,
+    success: false,
+  },
+  restorePatient: {
+    isLoading: false,
+    data: [],
+    error: null,
+    success: false,
+  },
+  fetchBranches: {
+    isLoading: false,
+    data: [],
+    error: null,
+  },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  payload?: any
+  duplicateWarning: null as any,
 }
 
-const patientReducer = (
-  state: PatientState = initialState,
-  action: PatientAction
-): PatientState => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const patientReducer = (state = INITIAL_STATE, action: any) => {
   switch (action.type) {
-    case PATIENT_ACTIONS.FETCH_LIST_REQUEST:
+    // FETCH PATIENTS
+    case PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.REQUEST:
       return {
         ...state,
-        isLoading: true,
-        error: null,
+        fetchPatients: {
+          ...state.fetchPatients,
+          isLoading: true,
+          error: null,
+        },
       }
-    case PATIENT_ACTIONS.FETCH_LIST_SUCCESS: {
-      const payload = action.payload as PatientListResponse
+    case PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.SUCCESS:
       return {
         ...state,
-        isLoading: false,
-        rows: payload.data,
-        pagination: payload.pagination,
+        fetchPatients: {
+          isLoading: false,
+          data: action.data,
+          error: null,
+        },
       }
-    }
-    case PATIENT_ACTIONS.FETCH_LIST_ERROR:
+    case PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.ERROR:
       return {
         ...state,
-        isLoading: false,
-        error: action.payload as string,
+        fetchPatients: {
+          isLoading: false,
+          data: [],
+          error: action.error,
+        },
       }
-    case PATIENT_ACTIONS.CREATE_REQUEST:
+
+    // CREATE PATIENT
+    case PATIENT_ACTION_TYPES.CREATE_PATIENT + COMMON_ACTION_TYPES.REQUEST:
       return {
         ...state,
-        isCreating: true,
-        error: null,
+        createPatient: {
+          ...state.createPatient,
+          isLoading: true,
+          error: null,
+          success: false,
+        },
+        duplicateWarning: null,
       }
-    case PATIENT_ACTIONS.CREATE_SUCCESS:
+    case PATIENT_ACTION_TYPES.CREATE_PATIENT + COMMON_ACTION_TYPES.SUCCESS:
       return {
         ...state,
-        isCreating: false,
+        createPatient: {
+          isLoading: false,
+          data: action.data,
+          error: null,
+          success: true,
+        },
       }
-    case PATIENT_ACTIONS.CREATE_ERROR:
+    case PATIENT_ACTION_TYPES.CREATE_PATIENT + COMMON_ACTION_TYPES.ERROR:
       return {
         ...state,
-        isCreating: false,
-        error: action.payload as string,
+        createPatient: {
+          isLoading: false,
+          data: [],
+          error: action.error,
+          success: false,
+        },
       }
-    case PATIENT_ACTIONS.FETCH_BRANCHES_SUCCESS:
+    case PATIENT_ACTION_TYPES.CREATE_PATIENT + COMMON_ACTION_TYPES.CLEAR:
       return {
         ...state,
-        branches: action.payload as BranchListItem[],
+        createPatient: {
+          isLoading: false,
+          data: [],
+          error: null,
+          success: false,
+        },
       }
-    case PATIENT_ACTIONS.FETCH_BY_ID_REQUEST:
+
+    // FETCH PATIENT BY ID
+    case PATIENT_ACTION_TYPES.FETCH_PATIENT_BY_ID + COMMON_ACTION_TYPES.REQUEST:
       return {
         ...state,
-        isFetchingPatient: true,
-        editingPatient: null,
-        error: null,
+        fetchPatientById: {
+          isLoading: true,
+          data: null,
+          error: null,
+        },
       }
-    case PATIENT_ACTIONS.FETCH_BY_ID_SUCCESS:
+    case PATIENT_ACTION_TYPES.FETCH_PATIENT_BY_ID + COMMON_ACTION_TYPES.SUCCESS:
       return {
         ...state,
-        isFetchingPatient: false,
-        editingPatient: action.payload as PatientFullApiRecord,
+        fetchPatientById: {
+          isLoading: false,
+          data: action.data,
+          error: null,
+        },
       }
-    case PATIENT_ACTIONS.FETCH_BY_ID_ERROR:
+    case PATIENT_ACTION_TYPES.FETCH_PATIENT_BY_ID + COMMON_ACTION_TYPES.ERROR:
       return {
         ...state,
-        isFetchingPatient: false,
-        error: action.payload as string,
+        fetchPatientById: {
+          isLoading: false,
+          data: null,
+          error: action.error,
+        },
       }
-    case PATIENT_ACTIONS.UPDATE_REQUEST:
+
+    // UPDATE PATIENT
+    case PATIENT_ACTION_TYPES.UPDATE_PATIENT + COMMON_ACTION_TYPES.REQUEST:
       return {
         ...state,
-        isUpdating: true,
-        error: null,
+        updatePatient: {
+          ...state.updatePatient,
+          isLoading: true,
+          error: null,
+          success: false,
+        },
+        duplicateWarning: null,
       }
-    case PATIENT_ACTIONS.UPDATE_SUCCESS:
+    case PATIENT_ACTION_TYPES.UPDATE_PATIENT + COMMON_ACTION_TYPES.SUCCESS:
       return {
         ...state,
-        isUpdating: false,
-        editingPatient: null,
+        updatePatient: {
+          isLoading: false,
+          data: action.data,
+          error: null,
+          success: true,
+        },
       }
-    case PATIENT_ACTIONS.UPDATE_ERROR:
+    case PATIENT_ACTION_TYPES.UPDATE_PATIENT + COMMON_ACTION_TYPES.ERROR:
       return {
         ...state,
-        isUpdating: false,
-        error: action.payload as string,
+        updatePatient: {
+          isLoading: false,
+          data: [],
+          error: action.error,
+          success: false,
+        },
       }
+    case PATIENT_ACTION_TYPES.UPDATE_PATIENT + COMMON_ACTION_TYPES.CLEAR:
+      return {
+        ...state,
+        updatePatient: {
+          isLoading: false,
+          data: [],
+          error: null,
+          success: false,
+        },
+      }
+
+    // DELETE PATIENT
+    case PATIENT_ACTION_TYPES.DELETE_PATIENT + COMMON_ACTION_TYPES.REQUEST:
+      return {
+        ...state,
+        deletePatient: {
+          ...state.deletePatient,
+          isLoading: true,
+          error: null,
+          success: false,
+        },
+      }
+    case PATIENT_ACTION_TYPES.DELETE_PATIENT + COMMON_ACTION_TYPES.SUCCESS:
+      return {
+        ...state,
+        deletePatient: {
+          isLoading: false,
+          data: action.data,
+          error: null,
+          success: true,
+        },
+      }
+    case PATIENT_ACTION_TYPES.DELETE_PATIENT + COMMON_ACTION_TYPES.ERROR:
+      return {
+        ...state,
+        deletePatient: {
+          isLoading: false,
+          data: [],
+          error: action.error,
+          success: false,
+        },
+      }
+
+    // RESTORE PATIENT
+    case PATIENT_ACTION_TYPES.RESTORE_PATIENT + COMMON_ACTION_TYPES.REQUEST:
+      return {
+        ...state,
+        restorePatient: {
+          ...state.restorePatient,
+          isLoading: true,
+          error: null,
+          success: false,
+        },
+      }
+    case PATIENT_ACTION_TYPES.RESTORE_PATIENT + COMMON_ACTION_TYPES.SUCCESS:
+      return {
+        ...state,
+        restorePatient: {
+          isLoading: false,
+          data: action.data,
+          error: null,
+          success: true,
+        },
+      }
+    case PATIENT_ACTION_TYPES.RESTORE_PATIENT + COMMON_ACTION_TYPES.ERROR:
+      return {
+        ...state,
+        restorePatient: {
+          isLoading: false,
+          data: [],
+          error: action.error,
+          success: false,
+        },
+      }
+
+    // FETCH BRANCHES
+    case PATIENT_ACTION_TYPES.FETCH_BRANCHES + COMMON_ACTION_TYPES.REQUEST:
+      return {
+        ...state,
+        fetchBranches: {
+          ...state.fetchBranches,
+          isLoading: true,
+          error: null,
+        },
+      }
+    case PATIENT_ACTION_TYPES.FETCH_BRANCHES + COMMON_ACTION_TYPES.SUCCESS:
+      return {
+        ...state,
+        fetchBranches: {
+          isLoading: false,
+          data: action.data,
+          error: null,
+        },
+      }
+    case PATIENT_ACTION_TYPES.FETCH_BRANCHES + COMMON_ACTION_TYPES.ERROR:
+      return {
+        ...state,
+        fetchBranches: {
+          isLoading: false,
+          data: [],
+          error: action.error,
+        },
+      }
+
+    // DUPLICATE WARNING
+    case PATIENT_ACTION_TYPES.DUPLICATE_WARNING:
+      return {
+        ...state,
+        createPatient: {
+          ...state.createPatient,
+          isLoading: false,
+          success: false,
+        },
+        updatePatient: {
+          ...state.updatePatient,
+          isLoading: false,
+          success: false,
+        },
+        duplicateWarning: action.payload,
+      }
+    case PATIENT_ACTION_TYPES.DUPLICATE_WARNING + COMMON_ACTION_TYPES.CLEAR:
+      return {
+        ...state,
+        duplicateWarning: null,
+      }
+
     default:
       return state
   }

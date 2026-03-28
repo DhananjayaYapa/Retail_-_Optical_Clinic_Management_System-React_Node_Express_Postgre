@@ -5,6 +5,8 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Alert, Box, Collapse, IconButton, LinearProgress } from '@mui/material'
 
 import {
+  DeleteConfirmDialog,
+  DuplicateWarningDialog,
   PageHeader,
   PatientEntryForm,
   PatientFilters,
@@ -22,186 +24,46 @@ import type {
   UpdatePatientPayload,
 } from '../../utilities/models'
 import { validateControlledFormData } from '../../utilities/helpers/controlledFormValidator'
+import { matchesAgeRange, mapPatientToFormData } from '../../utilities/helpers/patient.helpers'
+import {
+  DEFAULT_FETCH_PARAMS,
+  INITIAL_ENTRY_STATE,
+  INITIAL_FILTER_STATE,
+} from '../../utilities/constants/patient.constants'
+import { FEATURES } from '../../utilities/constants'
+import { usePermissions } from '../../utilities/helpers'
 import { patientActions } from '../../redux/actions'
 import type { AppDispatch, RootState } from '../../redux/store'
 
-const INITIAL_FILTER_STATE: PatientFilterFormDto = {
-  firstName: { value: '', validator: 'text', isRequired: false, error: null, disable: false },
-  lastName: { value: '', validator: 'text', isRequired: false, error: null, disable: false },
-  ageRange: { value: '', validator: 'text', isRequired: false, error: null, disable: false },
-  doctor: { value: '', validator: 'text', isRequired: false, error: null, disable: false },
-  healthCardNumber: {
-    value: '',
-    validator: 'text',
-    isRequired: false,
-    error: null,
-    disable: false,
-  },
-  gender: { value: 'ALL', validator: 'text', isRequired: false, error: null, disable: false },
-  userStatus: { value: 'ALL', validator: 'text', isRequired: false, error: null, disable: false },
-  healthCardStatus: {
-    value: 'ALL',
-    validator: 'text',
-    isRequired: false,
-    error: null,
-    disable: false,
-  },
-}
-
-const _field = (
-  isRequired = false,
-  validator = 'text',
-  extra: Record<string, unknown> = {}
-): {
-  value: string
-  validator: string
-  isRequired: boolean
-  error: null
-  disable: false
-  [key: string]: unknown
-} => ({
-  value: '',
-  validator,
-  isRequired,
-  error: null,
-  disable: false,
-  ...extra,
-})
-
-const INITIAL_ENTRY_STATE: PatientEntryFormDto = {
-  title: _field(),
-  firstName: _field(true, 'text', { minLength: 3 }),
-  lastName: _field(true, 'text', { minLength: 3 }),
-  middleName: _field(),
-  dateOfBirth: _field(true, 'date', { pastOnly: true }),
-  gender: _field(true, 'select'),
-  branch: _field(true, 'select'),
-  address1: _field(true),
-  address2: _field(),
-  city: _field(true),
-  province: _field(true),
-  country: _field(),
-  postalCode: _field(true),
-  phoneNumber: _field(true, 'phone', { digitCount: 10 }),
-  businessPhone: _field(false, 'phone', { digitCount: 10 }),
-  alternativePhone: _field(false, 'phone', { digitCount: 10 }),
-  email: _field(false, 'email'),
-  emergencyFullName: _field(),
-  emergencyRelationship: _field(),
-  emergencyAddress1: _field(),
-  emergencyAddress2: _field(),
-  emergencyCity: _field(),
-  emergencyContactNumber: _field(false, 'phone', { digitCount: 10 }),
-  healthCardNumber: _field(),
-  healthCardVisionCode: _field(),
-  insuranceExpireDate: _field(false, 'date'),
-  preferDoctor: _field(),
-  guardian: _field(),
-  referredBy: _field(),
-  patientNote: _field(),
-}
-
-const calculateAge = (dob: string): number => {
-  const birth = new Date(dob)
-  const today = new Date()
-  let age = today.getFullYear() - birth.getFullYear()
-  const monthDiff = today.getMonth() - birth.getMonth()
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-    age--
-  }
-  return age
-}
-
-const matchesAgeRange = (dob: string, range: string): boolean => {
-  if (!range) return true
-  const age = calculateAge(dob)
-  if (range === '66+') return age >= 66
-  const [min, max] = range.split('-').map(Number)
-  return age >= min && age <= max
-}
-
-const parseFullName = (
-  fullName: string
-): { title: string; firstName: string; middleName: string; lastName: string } => {
-  const titles = ['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.']
-  const parts = fullName.trim().split(/\s+/)
-  let title = ''
-  if (parts.length > 0 && titles.includes(parts[0])) {
-    title = parts.shift()!
-  }
-  const firstName = parts.shift() || ''
-  const lastName = parts.pop() || ''
-  const middleName = parts.join(' ')
-  return { title, firstName, middleName, lastName }
-}
-
-const mapPatientToFormData = (patient: PatientFullApiRecord): PatientEntryFormDto => {
-  const { title, firstName, middleName, lastName } = parseFullName(patient.fullName)
-  const setVal = (
-    base: PatientEntryFormDto[keyof PatientEntryFormDto],
-    value: string
-  ): PatientEntryFormDto[keyof PatientEntryFormDto] => ({ ...base, value })
-
-  const mobile = patient.phoneNumbers.find((p) => p.isPrimary || p.phoneType === 'MOBILE')
-  const business = patient.phoneNumbers.find((p) => p.phoneType === 'BUSINESS')
-  const additional = patient.phoneNumbers.find((p) => p.phoneType === 'ADDITIONAL')
-
-  const base = { ...INITIAL_ENTRY_STATE }
-  return {
-    ...base,
-    title: setVal(base.title, title),
-    firstName: setVal(base.firstName, firstName),
-    lastName: setVal(base.lastName, lastName),
-    middleName: setVal(base.middleName, middleName),
-    dateOfBirth: setVal(base.dateOfBirth, patient.dateOfBirth.split('T')[0]),
-    gender: setVal(base.gender, patient.gender),
-    branch: setVal(base.branch, String(patient.branchId)),
-    address1: setVal(base.address1, patient.address?.addressLine1 || ''),
-    address2: setVal(base.address2, patient.address?.addressLine2 || ''),
-    city: setVal(base.city, patient.address?.city || ''),
-    province: setVal(base.province, patient.address?.province || ''),
-    country: setVal(base.country, ''),
-    postalCode: setVal(base.postalCode, patient.address?.postalCode || ''),
-    phoneNumber: setVal(base.phoneNumber, mobile?.phoneNumber || ''),
-    businessPhone: setVal(base.businessPhone, business?.phoneNumber || ''),
-    alternativePhone: setVal(base.alternativePhone, additional?.phoneNumber || ''),
-    email: setVal(base.email, ''),
-    emergencyFullName: setVal(base.emergencyFullName, patient.emergencyContact?.fullName || ''),
-    emergencyRelationship: setVal(
-      base.emergencyRelationship,
-      patient.emergencyContact?.relationship || ''
-    ),
-    emergencyAddress1: setVal(base.emergencyAddress1, patient.emergencyContact?.addressLine1 || ''),
-    emergencyAddress2: setVal(base.emergencyAddress2, patient.emergencyContact?.addressLine2 || ''),
-    emergencyCity: setVal(base.emergencyCity, patient.emergencyContact?.city || ''),
-    emergencyContactNumber: setVal(
-      base.emergencyContactNumber,
-      patient.emergencyContact?.contactNumber || ''
-    ),
-    healthCardNumber: setVal(base.healthCardNumber, patient.insuranceInfo?.healthCardNumber || ''),
-    healthCardVisionCode: setVal(
-      base.healthCardVisionCode,
-      patient.insuranceInfo?.healthCardVisionCode || ''
-    ),
-    insuranceExpireDate: setVal(
-      base.insuranceExpireDate,
-      patient.insuranceInfo?.expiryDate ? patient.insuranceInfo.expiryDate.split('T')[0] : ''
-    ),
-    preferDoctor: setVal(base.preferDoctor, patient.insuranceInfo?.preferredDoctor || ''),
-    guardian: setVal(base.guardian, patient.additionalInfo?.guardian || ''),
-    referredBy: setVal(base.referredBy, patient.additionalInfo?.referredBy || ''),
-    patientNote: setVal(base.patientNote, patient.additionalInfo?.patientNote || ''),
-  }
-}
-
 const Patients = () => {
   const dispatch = useDispatch<AppDispatch>()
-  const { rows, isLoading, isCreating, isUpdating, isFetchingPatient, editingPatient, branches } =
-    useSelector((state: RootState) => state.patient)
+  const permissions = usePermissions({
+    canCreate: FEATURES.PATIENT_CREATE,
+    canUpdate: FEATURES.PATIENT_UPDATE,
+    canDelete: FEATURES.PATIENT_DELETE,
+    canRestore: FEATURES.PATIENT_RESTORE,
+  })
+  const fetchPatientsState = useSelector((state: RootState) => state.patient.fetchPatients)
+  const createPatientState = useSelector((state: RootState) => state.patient.createPatient)
+  const fetchPatientByIdState = useSelector((state: RootState) => state.patient.fetchPatientById)
+  const updatePatientState = useSelector((state: RootState) => state.patient.updatePatient)
+  const deletePatientState = useSelector((state: RootState) => state.patient.deletePatient)
+  const fetchBranchesState = useSelector((state: RootState) => state.patient.fetchBranches)
+  const duplicateWarning = useSelector((state: RootState) => state.patient.duplicateWarning)
   const searchTerm = useSelector((state: RootState) => state.search.term)
   const alert = useSelector((state: RootState) => state.alert.fetchPatients)
   const createAlert = useSelector((state: RootState) => state.alert.createPatient)
   const updateAlert = useSelector((state: RootState) => state.alert.updatePatient)
+  const deleteAlert = useSelector((state: RootState) => state.alert.deletePatient)
+  const restoreAlert = useSelector((state: RootState) => state.alert.restorePatient)
+
+  const rows = useMemo<PatientListItem[]>(
+    () => fetchPatientsState.data?.data || [],
+    [fetchPatientsState.data]
+  )
+  const isLoading = fetchPatientsState.isLoading
+  const branches = useMemo(() => fetchBranchesState.data || [], [fetchBranchesState.data])
+  const editingPatient = fetchPatientByIdState.data
   const [filters, setFilters] = useState<PatientFilterFormDto>(INITIAL_FILTER_STATE)
   const [showEntryForm, setShowEntryForm] = useState(false)
   const [entryFormData, setEntryFormData] = useState<PatientEntryFormDto>(INITIAL_ENTRY_STATE)
@@ -209,15 +71,21 @@ const Patients = () => {
   const [updateFormData, setUpdateFormData] = useState<PatientEntryFormDto>(INITIAL_ENTRY_STATE)
   const [editingPatientId, setEditingPatientId] = useState<number | null>(null)
   const [showProfile, setShowProfile] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleteDialogVariant, setDeleteDialogVariant] = useState<'delete' | 'disable'>('delete')
+  const [deletingPatientId, setDeletingPatientId] = useState<number | null>(null)
+  const [deletingPatientName, setDeletingPatientName] = useState('')
   const prevCreateAlertRef = useRef(createAlert)
   const prevUpdateAlertRef = useRef(updateAlert)
+  const prevDeleteAlertRef = useRef(deleteAlert)
+  const prevRestoreAlertRef = useRef(restoreAlert)
 
   useEffect(() => {
-    dispatch(patientActions.fetchPatients({ page: 1, limit: 100 }))
-    dispatch(patientActions.fetchBranches())
+    dispatch(patientActions.fetchPatientsRequest(DEFAULT_FETCH_PARAMS))
+    dispatch(patientActions.fetchBranchesRequest())
   }, [dispatch])
 
-  // Watch createAlert — on success, close dialog, reset form, re-fetch list
+  // Watch createAlert — on success, close dialog, reset form
   useEffect(() => {
     if (
       createAlert &&
@@ -226,12 +94,11 @@ const Patients = () => {
     ) {
       setShowEntryForm(false)
       setEntryFormData(INITIAL_ENTRY_STATE)
-      dispatch(patientActions.fetchPatients({ page: 1, limit: 100 }))
     }
     prevCreateAlertRef.current = createAlert
-  }, [createAlert, dispatch])
+  }, [createAlert])
 
-  // Watch updateAlert — on success, close dialog, reset form, re-fetch list
+  // Watch updateAlert — on success, close dialog, reset form
   useEffect(() => {
     if (
       updateAlert &&
@@ -241,10 +108,40 @@ const Patients = () => {
       setShowUpdateForm(false)
       setUpdateFormData(INITIAL_ENTRY_STATE)
       setEditingPatientId(null)
-      dispatch(patientActions.fetchPatients({ page: 1, limit: 100 }))
     }
     prevUpdateAlertRef.current = updateAlert
-  }, [updateAlert, dispatch])
+  }, [updateAlert])
+
+  // Watch deleteAlert — on success, close dialog, refresh profile
+  useEffect(() => {
+    if (
+      deleteAlert &&
+      deleteAlert.severity === 'success' &&
+      prevDeleteAlertRef.current !== deleteAlert
+    ) {
+      setShowDeleteDialog(false)
+      setDeletingPatientId(null)
+      setDeletingPatientName('')
+      if (editingPatient) {
+        dispatch(patientActions.fetchPatientByIdRequest(editingPatient.id))
+      }
+    }
+    prevDeleteAlertRef.current = deleteAlert
+  }, [deleteAlert, dispatch, editingPatient])
+
+  // Watch restoreAlert — on success, refresh profile
+  useEffect(() => {
+    if (
+      restoreAlert &&
+      restoreAlert.severity === 'success' &&
+      prevRestoreAlertRef.current !== restoreAlert
+    ) {
+      if (editingPatient) {
+        dispatch(patientActions.fetchPatientByIdRequest(editingPatient.id))
+      }
+    }
+    prevRestoreAlertRef.current = restoreAlert
+  }, [restoreAlert, dispatch, editingPatient])
 
   // Populate update form when editingPatient is fetched
   useEffect(() => {
@@ -370,6 +267,10 @@ const Patients = () => {
       )
         return false
 
+      // User status
+      if (filters.userStatus.value === 'ACTIVE' && row.deletedAt) return false
+      if (filters.userStatus.value === 'INACTIVE' && !row.deletedAt) return false
+
       return true
     })
   }, [rows, filters, searchTerm])
@@ -456,12 +357,12 @@ const Patients = () => {
       }
     }
 
-    dispatch(patientActions.createPatient(payload))
+    dispatch(patientActions.createPatientRequest(payload))
   }
 
   const handleRowClick = (patient: PatientListItem) => {
     setShowProfile(true)
-    dispatch(patientActions.fetchPatientById(patient.id))
+    dispatch(patientActions.fetchPatientByIdRequest(patient.id))
   }
 
   const handleCloseProfile = () => {
@@ -471,7 +372,30 @@ const Patients = () => {
   const handleUpdate = (patient: PatientListItem) => {
     setEditingPatientId(patient.id)
     setShowUpdateForm(true)
-    dispatch(patientActions.fetchPatientById(patient.id))
+    dispatch(patientActions.fetchPatientByIdRequest(patient.id))
+  }
+
+  const handleDeleteConfirm = (reason: string) => {
+    if (deletingPatientId) {
+      dispatch(patientActions.deletePatientRequest({ id: deletingPatientId, reason }))
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setShowDeleteDialog(false)
+    setDeletingPatientId(null)
+    setDeletingPatientName('')
+  }
+
+  const handleToggleStatus = (patient: PatientFullApiRecord) => {
+    if (patient.deletedAt) {
+      dispatch(patientActions.restorePatientRequest(patient.id))
+    } else {
+      setDeletingPatientId(patient.id)
+      setDeletingPatientName(patient.fullName)
+      setDeleteDialogVariant('disable')
+      setShowDeleteDialog(true)
+    }
   }
 
   const onUpdateInputHandleChange = (property: keyof PatientEntryFormDto, value: string) => {
@@ -576,7 +500,27 @@ const Patients = () => {
       payload.additionalInfo = null
     }
 
-    dispatch(patientActions.updatePatient(editingPatientId, payload))
+    dispatch(patientActions.updatePatientRequest({ id: editingPatientId, data: payload }))
+  }
+
+  const handleDuplicateOverride = () => {
+    if (!duplicateWarning) return
+    if (duplicateWarning.mode === 'create') {
+      const payload = duplicateWarning.payload as CreatePatientPayload
+      dispatch(patientActions.createPatientRequest({ ...payload, duplicateOverride: true }))
+    } else {
+      const payload = duplicateWarning.payload as UpdatePatientPayload
+      dispatch(
+        patientActions.updatePatientRequest({
+          id: duplicateWarning.patientId!,
+          data: { ...payload, duplicateOverride: true },
+        })
+      )
+    }
+  }
+
+  const handleDuplicateCancel = () => {
+    dispatch(patientActions.clearDuplicateWarning())
   }
 
   return (
@@ -584,9 +528,11 @@ const Patients = () => {
       <PageHeader
         title="Patients"
         subtitle="Manage patient list and registration"
-        actionLabel="Add New Patient"
-        actionIcon={<AddIcon />}
-        onAction={handleAddNewPatient}
+        {...(permissions.canCreate && {
+          actionLabel: 'Add New Patient',
+          actionIcon: <AddIcon />,
+          onAction: handleAddNewPatient,
+        })}
       />
 
       <PatientFilters
@@ -600,7 +546,7 @@ const Patients = () => {
       <PatientEntryForm
         open={showEntryForm}
         formData={entryFormData}
-        isSubmitting={isCreating}
+        isSubmitting={createPatientState.isLoading}
         branches={branches}
         onInputHandleChange={onEntryInputHandleChange}
         onInputFocus={handleEntryInputFocus}
@@ -611,13 +557,30 @@ const Patients = () => {
       <PatientUpdateForm
         open={showUpdateForm}
         formData={updateFormData}
-        isSubmitting={isUpdating}
-        isLoading={isFetchingPatient}
+        isSubmitting={updatePatientState.isLoading}
+        isLoading={fetchPatientByIdState.isLoading}
         branches={branches}
         onInputHandleChange={onUpdateInputHandleChange}
         onInputFocus={handleUpdateInputFocus}
         onSave={handleSaveUpdate}
         onCancel={handleCancelUpdate}
+      />
+
+      <DeleteConfirmDialog
+        open={showDeleteDialog}
+        patientName={deletingPatientName}
+        isSubmitting={deletePatientState.isLoading}
+        variant={deleteDialogVariant}
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+      />
+
+      <DuplicateWarningDialog
+        open={!!duplicateWarning}
+        warning={duplicateWarning}
+        isSubmitting={createPatientState.isLoading || updatePatientState.isLoading}
+        onOverride={handleDuplicateOverride}
+        onCancel={handleDuplicateCancel}
       />
 
       <Collapse in={!!updateAlert}>
@@ -632,6 +595,22 @@ const Patients = () => {
         {createAlert && (
           <Alert severity={createAlert.severity} sx={{ mb: 2 }}>
             {createAlert.message}
+          </Alert>
+        )}
+      </Collapse>
+
+      <Collapse in={!!deleteAlert}>
+        {deleteAlert && (
+          <Alert severity={deleteAlert.severity} sx={{ mb: 2 }}>
+            {deleteAlert.message}
+          </Alert>
+        )}
+      </Collapse>
+
+      <Collapse in={!!restoreAlert}>
+        {restoreAlert && (
+          <Alert severity={restoreAlert.severity} sx={{ mb: 2 }}>
+            {restoreAlert.message}
           </Alert>
         )}
       </Collapse>
@@ -653,7 +632,12 @@ const Patients = () => {
         }}
       >
         <Box sx={{ flex: showProfile ? 1 : 1, minWidth: 0 }}>
-          <PatientTable rows={filteredRows} onUpdate={handleUpdate} onRowClick={handleRowClick} />
+          <PatientTable
+            rows={filteredRows}
+            onUpdate={handleUpdate}
+            onRowClick={handleRowClick}
+            canUpdate={permissions.canUpdate}
+          />
         </Box>
         {showProfile && (
           <Box
@@ -672,7 +656,11 @@ const Patients = () => {
               <CloseIcon fontSize="small" />
             </IconButton>
             {editingPatient ? (
-              <PatientProfile patient={editingPatient} />
+              <PatientProfile
+                patient={editingPatient}
+                onToggleStatus={handleToggleStatus}
+                canToggleStatus={permissions.canDelete}
+              />
             ) : (
               <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>Loading...</Box>
             )}

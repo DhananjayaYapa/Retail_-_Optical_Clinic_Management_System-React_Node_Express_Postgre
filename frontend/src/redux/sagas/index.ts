@@ -1,5 +1,5 @@
 import { all, takeEvery } from 'redux-saga/effects'
-import { patientSaga } from './patient.saga'
+import patientSaga from './patient.saga'
 import { handleAlertWithAutoClear } from '../../utilities/helpers/commonSaga'
 import { COMMON_ACTION_TYPES } from '../../utilities/constants'
 import type { AlertActionDto } from '../../utilities/models'

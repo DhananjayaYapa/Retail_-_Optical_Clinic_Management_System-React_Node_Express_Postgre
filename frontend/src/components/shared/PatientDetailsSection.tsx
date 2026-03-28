@@ -1,7 +1,12 @@
 import { Box, MenuItem } from '@mui/material'
-import type { BranchListItem } from '../../../utilities/models'
+import type { BranchListItem } from '../../utilities/models'
+import {
+  GENDER_OPTIONS,
+  outlineSx,
+  type PatientSectionProps,
+  TITLE_OPTIONS,
+} from '../../utilities/constants/patient.constants'
 import { FormRow, SectionHeader } from './FormComponents'
-import { GENDER_OPTIONS, outlineSx, type PatientSectionProps, TITLE_OPTIONS } from './formConstants'
 
 interface PatientDetailsSectionProps extends PatientSectionProps {
   branches?: BranchListItem[]

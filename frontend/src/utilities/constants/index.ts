@@ -1,3 +1,5 @@
 export * from './action.constants'
 export * from './routes.constants'
 export * from './app.constants'
+export * from './patient.constants'
+export * from './permissions.config'

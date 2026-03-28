@@ -1,6 +1,6 @@
 import { Box } from '@mui/material'
+import { outlineSx, type PatientSectionProps } from '../../utilities/constants/patient.constants'
 import { FormRow, SectionHeader } from './FormComponents'
-import { outlineSx, type PatientSectionProps } from './formConstants'
 
 const InsuranceAdditionalSection = ({
   formData,

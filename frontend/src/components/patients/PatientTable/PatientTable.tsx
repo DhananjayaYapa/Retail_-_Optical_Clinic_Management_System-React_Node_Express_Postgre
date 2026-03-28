@@ -3,38 +3,16 @@ import { Box, Chip, IconButton, Paper, Tooltip, Typography } from '@mui/material
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import { useMemo } from 'react'
 import type { HealthCardStatus, PatientListItem } from '../../../utilities/models'
+import { calculateAge, getHealthCardColor } from '../../../utilities/helpers/patient.helpers'
 
 interface PatientTableProps {
   rows: PatientListItem[]
   onUpdate?: (patient: PatientListItem) => void
   onRowClick?: (patient: PatientListItem) => void
+  canUpdate?: boolean
 }
 
-const getAge = (dateOfBirth: string): number => {
-  const dob = new Date(dateOfBirth)
-  const today = new Date()
-
-  let age = today.getFullYear() - dob.getFullYear()
-  const monthDiff = today.getMonth() - dob.getMonth()
-
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-    age -= 1
-  }
-
-  return age
-}
-
-const getHealthCardColor = (status: HealthCardStatus): 'success' | 'warning' | 'default' => {
-  if (status === 'ACTIVE') {
-    return 'success'
-  }
-  if (status === 'EXPIRED') {
-    return 'warning'
-  }
-  return 'default'
-}
-
-const PatientTable = ({ rows, onUpdate, onRowClick }: PatientTableProps) => {
+const PatientTable = ({ rows, onUpdate, onRowClick, canUpdate = true }: PatientTableProps) => {
   const columns = useMemo<GridColDef<PatientListItem>[]>(
     () => [
       {
@@ -62,7 +40,7 @@ const PatientTable = ({ rows, onUpdate, onRowClick }: PatientTableProps) => {
         minWidth: 70,
         flex: 0.5,
         sortable: false,
-        valueGetter: (_value, row) => getAge(row.dateOfBirth),
+        valueGetter: (_value, row) => calculateAge(row.dateOfBirth),
       },
       {
         field: 'gender',
@@ -96,22 +74,33 @@ const PatientTable = ({ rows, onUpdate, onRowClick }: PatientTableProps) => {
         minWidth: 150,
         flex: 1,
       },
-      {
-        field: 'actions',
-        headerName: 'Update',
-        minWidth: 90,
-        sortable: false,
-        filterable: false,
-        renderCell: (params) => (
-          <Tooltip title="Update patient">
-            <IconButton size="small" onClick={() => onUpdate?.(params.row)}>
-              <EditOutlinedIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        ),
-      },
+      ...(canUpdate
+        ? [
+            {
+              field: 'actions',
+              headerName: 'Action',
+              minWidth: 90,
+              sortable: false,
+              filterable: false,
+              renderCell: (params: { row: PatientListItem }) =>
+                params.row.deletedAt ? null : (
+                  <Tooltip title="Update patient">
+                    <IconButton
+                      size="small"
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation()
+                        onUpdate?.(params.row)
+                      }}
+                    >
+                      <EditOutlinedIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                ),
+            },
+          ]
+        : []),
     ],
-    [onUpdate]
+    [onUpdate, canUpdate]
   )
 
   return (
@@ -126,7 +115,11 @@ const PatientTable = ({ rows, onUpdate, onRowClick }: PatientTableProps) => {
         columns={columns}
         disableRowSelectionOnClick
         autoHeight
-        onRowClick={(params) => onRowClick?.(params.row as PatientListItem)}
+        getRowClassName={(params) => (params.row.deletedAt ? 'row-disabled' : '')}
+        onRowClick={(params) => {
+          if (params.row.deletedAt) return
+          onRowClick?.(params.row as PatientListItem)
+        }}
         pageSizeOptions={[10, 25, 50]}
         initialState={{
           pagination: {
@@ -137,6 +130,14 @@ const PatientTable = ({ rows, onUpdate, onRowClick }: PatientTableProps) => {
           border: 'none',
           '& .MuiDataGrid-columnHeaders': {
             bgcolor: 'rgba(2, 6, 23, 0.04)',
+          },
+          '& .MuiDataGrid-row': {
+            cursor: 'pointer',
+          },
+          '& .MuiDataGrid-row.row-disabled': {
+            opacity: 0.45,
+            cursor: 'default',
+            pointerEvents: 'none',
           },
         }}
       />

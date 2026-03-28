@@ -5,6 +5,10 @@ import prisma from "../backend/src/config/db.js";
 
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || "admin@clinic.local";
 const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || "Admin@12345";
+const OPTOMETRIST_EMAIL =
+  process.env.SEED_OPTOMETRIST_EMAIL || "optometrist@clinic.local";
+const OPTOMETRIST_PASSWORD =
+  process.env.SEED_OPTOMETRIST_PASSWORD || "Opto@12345";
 const SALT_ROUNDS = 10;
 
 async function seedRoles() {
@@ -36,6 +40,29 @@ async function seedAdmin() {
       email: ADMIN_EMAIL,
       passwordHash,
       roleId: adminRole.id,
+    },
+  });
+}
+
+async function seedOptometrist() {
+  const optRole = await prisma.role.findUnique({
+    where: { name: "OPTOMETRIST" },
+  });
+  if (!optRole) {
+    throw new Error("OPTOMETRIST role not found. Role seeding failed.");
+  }
+
+  const passwordHash = await bcrypt.hash(OPTOMETRIST_PASSWORD, SALT_ROUNDS);
+
+  await prisma.user.upsert({
+    where: { email: OPTOMETRIST_EMAIL },
+    update: {
+      roleId: optRole.id,
+    },
+    create: {
+      email: OPTOMETRIST_EMAIL,
+      passwordHash,
+      roleId: optRole.id,
     },
   });
 }
@@ -610,11 +637,13 @@ async function seedPatients() {
 async function main() {
   await seedRoles();
   await seedAdmin();
+  await seedOptometrist();
   await seedBranches();
   await seedPatients();
 
   console.log("Database seed completed successfully.");
   console.log(`Admin login: ${ADMIN_EMAIL}`);
+  console.log(`Optometrist login: ${OPTOMETRIST_EMAIL}`);
 }
 
 main()

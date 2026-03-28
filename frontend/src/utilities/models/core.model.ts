@@ -13,14 +13,6 @@ export interface ApiResponseDto<T = unknown> {
   } | null
 }
 
-export interface AlertActionDto {
-  type: string
-  message?: string
-  severity?: 'success' | 'error' | 'warning' | 'info'
-  autoClear?: boolean
-  timeout?: number
-}
-
 // Pagination
 export interface PaginationParams {
   page?: number

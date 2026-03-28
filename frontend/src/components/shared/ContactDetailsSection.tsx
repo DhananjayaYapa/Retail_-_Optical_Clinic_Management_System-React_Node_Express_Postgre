@@ -13,7 +13,11 @@ import {
   Typography,
 } from '@mui/material'
 import { FormRow, SectionHeader } from './FormComponents'
-import { outlineSx, type PatientSectionProps, RELATIONSHIP_OPTIONS } from './formConstants'
+import {
+  outlineSx,
+  type PatientSectionProps,
+  RELATIONSHIP_OPTIONS,
+} from '../../utilities/constants/patient.constants'
 
 type ContactView = 'personal' | 'emergency' | 'both'
 

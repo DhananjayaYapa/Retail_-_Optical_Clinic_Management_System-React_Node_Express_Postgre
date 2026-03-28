@@ -1,29 +1,15 @@
 import { COMMON_ACTION_TYPES, PATIENT_ACTION_TYPES } from '../../utilities/constants'
-
-interface AlertItem {
-  message: string
-  severity: 'success' | 'error' | 'warning' | 'info'
-}
-
-export interface AlertState {
-  fetchPatients: AlertItem | null
-  createPatient: AlertItem | null
-  updatePatient: AlertItem | null
-}
+import type { AlertActionDto, AlertState } from '../../utilities/models'
 
 const initialState: AlertState = {
   fetchPatients: null,
   createPatient: null,
   updatePatient: null,
+  deletePatient: null,
+  restorePatient: null,
 }
 
-interface AlertAction {
-  type: string
-  message?: string
-  severity?: 'success' | 'error' | 'warning' | 'info'
-}
-
-const alertReducer = (state: AlertState = initialState, action: AlertAction): AlertState => {
+const alertReducer = (state: AlertState = initialState, action: AlertActionDto): AlertState => {
   switch (action.type) {
     case PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.SET_ALERT:
       return {
@@ -63,6 +49,32 @@ const alertReducer = (state: AlertState = initialState, action: AlertAction): Al
       return {
         ...state,
         updatePatient: null,
+      }
+    case PATIENT_ACTION_TYPES.DELETE_PATIENT + COMMON_ACTION_TYPES.SET_ALERT:
+      return {
+        ...state,
+        deletePatient: {
+          message: action.message || '',
+          severity: action.severity || 'error',
+        },
+      }
+    case PATIENT_ACTION_TYPES.DELETE_PATIENT + COMMON_ACTION_TYPES.CLEAR_ALERT:
+      return {
+        ...state,
+        deletePatient: null,
+      }
+    case PATIENT_ACTION_TYPES.RESTORE_PATIENT + COMMON_ACTION_TYPES.SET_ALERT:
+      return {
+        ...state,
+        restorePatient: {
+          message: action.message || '',
+          severity: action.severity || 'error',
+        },
+      }
+    case PATIENT_ACTION_TYPES.RESTORE_PATIENT + COMMON_ACTION_TYPES.CLEAR_ALERT:
+      return {
+        ...state,
+        restorePatient: null,
       }
     default:
       return state
