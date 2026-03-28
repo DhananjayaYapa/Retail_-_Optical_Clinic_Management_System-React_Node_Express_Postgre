@@ -15,7 +15,7 @@ export interface FormFieldDto<T = string> {
 }
 
 /**
- * Validates controlled form data following the Athena pattern
+ * Validates controlled form data
  * @param data Form data with fields containing value, validator, isRequired, error, disable
  * @returns [validatedData, isValid] tuple
  */
