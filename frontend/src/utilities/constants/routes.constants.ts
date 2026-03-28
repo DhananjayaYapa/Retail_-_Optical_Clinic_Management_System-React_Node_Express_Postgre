@@ -1,6 +1,7 @@
 // API Routes
 export const API_ROUTES = {
   LOGIN: '/auth/login',
+  LOGOUT: '/auth/logout',
   PROFILE: '/auth/profile',
   PATIENTS: '/patients',
   BRANCHES: '/branches',

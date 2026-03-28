@@ -1,5 +1,5 @@
 import { API_ROUTES } from '../utilities/constants'
-import { axiosPublicInstance } from './index'
+import { axiosPrivateInstance, axiosPublicInstance } from './index'
 
 interface LoginRequest {
   email: string
@@ -24,6 +24,13 @@ interface LoginApiResponse {
 export const authService = {
   async login(payload: LoginRequest) {
     const response = await axiosPublicInstance.post<LoginApiResponse>(API_ROUTES.LOGIN, payload)
+    return response.data.data
+  },
+  async logout() {
+    await axiosPrivateInstance.post(API_ROUTES.LOGOUT)
+  },
+  async getProfile() {
+    const response = await axiosPrivateInstance.get(API_ROUTES.PROFILE)
     return response.data.data
   },
 }
