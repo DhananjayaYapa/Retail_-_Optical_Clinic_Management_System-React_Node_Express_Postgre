@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Box, Divider, TextField, Typography } from '@mui/material'
-import type { PatientEntryFormDto } from '../../../utilities/models'
-import type { FormFieldDto } from '../../../utilities/helpers/controlledFormValidator'
+import type { PatientEntryFormDto } from '../../utilities/models'
+import type { FormFieldDto } from '../../utilities/helpers/controlledFormValidator'
 
 export interface FormRowProps {
   label: string

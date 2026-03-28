@@ -1,93 +1,80 @@
 import type {
-  BranchListItem,
   CreatePatientPayload,
-  PatientFullApiRecord,
+  DuplicatePatientWarning,
   PatientListQueryParams,
-  PatientListResponse,
   UpdatePatientPayload,
 } from '../../utilities/models'
-import { COMMON_ACTION_TYPES, PATIENT_ACTION_TYPES } from '../../utilities/constants'
+import { PATIENT_ACTION_TYPES, COMMON_ACTION_TYPES } from '../../utilities/constants'
 
-export const PATIENT_ACTIONS = {
-  FETCH_LIST_REQUEST: PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.REQUEST,
-  FETCH_LIST_SUCCESS: PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.SUCCESS,
-  FETCH_LIST_ERROR: PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.ERROR,
-  FETCH_LIST_SET_ALERT: PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.SET_ALERT,
-  FETCH_LIST_CLEAR_ALERT: PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.CLEAR_ALERT,
-  CREATE_REQUEST: PATIENT_ACTION_TYPES.CREATE_PATIENT + COMMON_ACTION_TYPES.REQUEST,
-  CREATE_SUCCESS: PATIENT_ACTION_TYPES.CREATE_PATIENT + COMMON_ACTION_TYPES.SUCCESS,
-  CREATE_ERROR: PATIENT_ACTION_TYPES.CREATE_PATIENT + COMMON_ACTION_TYPES.ERROR,
-  CREATE_SET_ALERT: PATIENT_ACTION_TYPES.CREATE_PATIENT + COMMON_ACTION_TYPES.SET_ALERT,
-  CREATE_CLEAR_ALERT: PATIENT_ACTION_TYPES.CREATE_PATIENT + COMMON_ACTION_TYPES.CLEAR_ALERT,
-  FETCH_BY_ID_REQUEST: PATIENT_ACTION_TYPES.FETCH_PATIENTS + '_BY_ID' + COMMON_ACTION_TYPES.REQUEST,
-  FETCH_BY_ID_SUCCESS: PATIENT_ACTION_TYPES.FETCH_PATIENTS + '_BY_ID' + COMMON_ACTION_TYPES.SUCCESS,
-  FETCH_BY_ID_ERROR: PATIENT_ACTION_TYPES.FETCH_PATIENTS + '_BY_ID' + COMMON_ACTION_TYPES.ERROR,
-  UPDATE_REQUEST: PATIENT_ACTION_TYPES.UPDATE_PATIENT + COMMON_ACTION_TYPES.REQUEST,
-  UPDATE_SUCCESS: PATIENT_ACTION_TYPES.UPDATE_PATIENT + COMMON_ACTION_TYPES.SUCCESS,
-  UPDATE_ERROR: PATIENT_ACTION_TYPES.UPDATE_PATIENT + COMMON_ACTION_TYPES.ERROR,
-  UPDATE_SET_ALERT: PATIENT_ACTION_TYPES.UPDATE_PATIENT + COMMON_ACTION_TYPES.SET_ALERT,
-  UPDATE_CLEAR_ALERT: PATIENT_ACTION_TYPES.UPDATE_PATIENT + COMMON_ACTION_TYPES.CLEAR_ALERT,
-  FETCH_BRANCHES_REQUEST: PATIENT_ACTION_TYPES.FETCH_BRANCHES + COMMON_ACTION_TYPES.REQUEST,
-  FETCH_BRANCHES_SUCCESS: PATIENT_ACTION_TYPES.FETCH_BRANCHES + COMMON_ACTION_TYPES.SUCCESS,
-  FETCH_BRANCHES_ERROR: PATIENT_ACTION_TYPES.FETCH_BRANCHES + COMMON_ACTION_TYPES.ERROR,
-} as const
+// FETCH PATIENTS
+const fetchPatientsRequest = (params?: PatientListQueryParams) => ({
+  type: PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.REQUEST,
+  params,
+})
+
+// CREATE PATIENT
+const createPatientRequest = (payload: CreatePatientPayload) => ({
+  type: PATIENT_ACTION_TYPES.CREATE_PATIENT + COMMON_ACTION_TYPES.REQUEST,
+  payload,
+})
+
+export const clearCreatePatientState = () => ({
+  type: PATIENT_ACTION_TYPES.CREATE_PATIENT + COMMON_ACTION_TYPES.CLEAR,
+})
+
+// FETCH PATIENT BY ID
+const fetchPatientByIdRequest = (payload: number) => ({
+  type: PATIENT_ACTION_TYPES.FETCH_PATIENT_BY_ID + COMMON_ACTION_TYPES.REQUEST,
+  payload,
+})
+
+// UPDATE PATIENT
+const updatePatientRequest = (payload: { id: number; data: UpdatePatientPayload }) => ({
+  type: PATIENT_ACTION_TYPES.UPDATE_PATIENT + COMMON_ACTION_TYPES.REQUEST,
+  payload,
+})
+
+export const clearUpdatePatientState = () => ({
+  type: PATIENT_ACTION_TYPES.UPDATE_PATIENT + COMMON_ACTION_TYPES.CLEAR,
+})
+
+// DELETE PATIENT
+const deletePatientRequest = (payload: { id: number; reason: string }) => ({
+  type: PATIENT_ACTION_TYPES.DELETE_PATIENT + COMMON_ACTION_TYPES.REQUEST,
+  payload,
+})
+
+// RESTORE PATIENT
+const restorePatientRequest = (payload: number) => ({
+  type: PATIENT_ACTION_TYPES.RESTORE_PATIENT + COMMON_ACTION_TYPES.REQUEST,
+  payload,
+})
+
+// FETCH BRANCHES
+const fetchBranchesRequest = () => ({
+  type: PATIENT_ACTION_TYPES.FETCH_BRANCHES + COMMON_ACTION_TYPES.REQUEST,
+})
+
+// DUPLICATE WARNING
+const duplicateWarning = (payload: DuplicatePatientWarning) => ({
+  type: PATIENT_ACTION_TYPES.DUPLICATE_WARNING,
+  payload,
+})
+
+export const clearDuplicateWarning = () => ({
+  type: PATIENT_ACTION_TYPES.DUPLICATE_WARNING + COMMON_ACTION_TYPES.CLEAR,
+})
 
 export const patientActions = {
-  fetchPatients: (payload: PatientListQueryParams = {}) => ({
-    type: PATIENT_ACTIONS.FETCH_LIST_REQUEST as typeof PATIENT_ACTIONS.FETCH_LIST_REQUEST,
-    payload,
-  }),
-  fetchPatientsSuccess: (payload: PatientListResponse) => ({
-    type: PATIENT_ACTIONS.FETCH_LIST_SUCCESS as typeof PATIENT_ACTIONS.FETCH_LIST_SUCCESS,
-    payload,
-  }),
-  fetchPatientsError: (payload: string) => ({
-    type: PATIENT_ACTIONS.FETCH_LIST_ERROR as typeof PATIENT_ACTIONS.FETCH_LIST_ERROR,
-    payload,
-  }),
-  createPatient: (payload: CreatePatientPayload) => ({
-    type: PATIENT_ACTIONS.CREATE_REQUEST as typeof PATIENT_ACTIONS.CREATE_REQUEST,
-    payload,
-  }),
-  createPatientSuccess: () => ({
-    type: PATIENT_ACTIONS.CREATE_SUCCESS as typeof PATIENT_ACTIONS.CREATE_SUCCESS,
-  }),
-  createPatientError: (payload: string) => ({
-    type: PATIENT_ACTIONS.CREATE_ERROR as typeof PATIENT_ACTIONS.CREATE_ERROR,
-    payload,
-  }),
-  fetchBranches: () => ({
-    type: PATIENT_ACTIONS.FETCH_BRANCHES_REQUEST as typeof PATIENT_ACTIONS.FETCH_BRANCHES_REQUEST,
-  }),
-  fetchBranchesSuccess: (payload: BranchListItem[]) => ({
-    type: PATIENT_ACTIONS.FETCH_BRANCHES_SUCCESS as typeof PATIENT_ACTIONS.FETCH_BRANCHES_SUCCESS,
-    payload,
-  }),
-  fetchBranchesError: (payload: string) => ({
-    type: PATIENT_ACTIONS.FETCH_BRANCHES_ERROR as typeof PATIENT_ACTIONS.FETCH_BRANCHES_ERROR,
-    payload,
-  }),
-  fetchPatientById: (id: number) => ({
-    type: PATIENT_ACTIONS.FETCH_BY_ID_REQUEST as typeof PATIENT_ACTIONS.FETCH_BY_ID_REQUEST,
-    payload: id,
-  }),
-  fetchPatientByIdSuccess: (payload: PatientFullApiRecord) => ({
-    type: PATIENT_ACTIONS.FETCH_BY_ID_SUCCESS as typeof PATIENT_ACTIONS.FETCH_BY_ID_SUCCESS,
-    payload,
-  }),
-  fetchPatientByIdError: (payload: string) => ({
-    type: PATIENT_ACTIONS.FETCH_BY_ID_ERROR as typeof PATIENT_ACTIONS.FETCH_BY_ID_ERROR,
-    payload,
-  }),
-  updatePatient: (id: number, payload: UpdatePatientPayload) => ({
-    type: PATIENT_ACTIONS.UPDATE_REQUEST as typeof PATIENT_ACTIONS.UPDATE_REQUEST,
-    payload: { id, data: payload },
-  }),
-  updatePatientSuccess: () => ({
-    type: PATIENT_ACTIONS.UPDATE_SUCCESS as typeof PATIENT_ACTIONS.UPDATE_SUCCESS,
-  }),
-  updatePatientError: (payload: string) => ({
-    type: PATIENT_ACTIONS.UPDATE_ERROR as typeof PATIENT_ACTIONS.UPDATE_ERROR,
-    payload,
-  }),
+  fetchPatientsRequest,
+  createPatientRequest,
+  clearCreatePatientState,
+  fetchPatientByIdRequest,
+  updatePatientRequest,
+  clearUpdatePatientState,
+  deletePatientRequest,
+  restorePatientRequest,
+  fetchBranchesRequest,
+  duplicateWarning,
+  clearDuplicateWarning,
 }

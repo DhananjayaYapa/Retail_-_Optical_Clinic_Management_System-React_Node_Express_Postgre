@@ -78,7 +78,7 @@ router.get(
 router.patch(
   '/:id',
   authenticate,
-  authorize('ADMIN', 'CASHIER'),
+  authorize('ADMIN', 'CASHIER', 'OPTOMETRIST'),
   validate({ params: patientIdParamSchema, body: updatePatientSchema }),
   update,
 );

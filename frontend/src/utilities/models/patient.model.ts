@@ -4,6 +4,18 @@ export type Gender = 'MALE' | 'FEMALE' | 'OTHER'
 
 export type HealthCardStatus = 'ACTIVE' | 'EXPIRED' | 'NOT_AVAILABLE'
 
+export interface DuplicatePatientWarning {
+  existingPatient: {
+    id: number
+    patientCode: string
+    fullName: string
+    dateOfBirth: string
+  }
+  mode: 'create' | 'update'
+  payload: CreatePatientPayload | UpdatePatientPayload
+  patientId?: number
+}
+
 export interface PaginationMeta {
   page: number
   limit: number
@@ -43,6 +55,7 @@ export interface PatientApiRecord {
   gender: Gender
   phoneNumbers: PatientPhone[]
   insuranceInfo?: PatientInsuranceInfo | null
+  deletedAt: string | null
 }
 
 export interface PatientListApiResponse {
@@ -69,6 +82,7 @@ export interface PatientListItem {
   healthCardNumber: string
   healthCardStatus: HealthCardStatus
   refDoctor: string
+  deletedAt: string | null
 }
 
 export interface PatientFilterFormDto {
@@ -159,6 +173,7 @@ export interface CreatePatientPayload {
   dateOfBirth: string
   gender: Gender
   branchId: number
+  duplicateOverride?: boolean
   address?: {
     addressLine1: string
     addressLine2?: string
@@ -198,6 +213,7 @@ export interface UpdatePatientPayload {
   dateOfBirth?: string
   gender?: Gender
   branchId?: number
+  duplicateOverride?: boolean
   address?: {
     addressLine1: string
     addressLine2?: string

@@ -4,11 +4,7 @@ import type { RootState } from '../redux/store'
 import { APP_ROUTES } from '../utilities/constants'
 import PrivateRoute from './PrivateRoute'
 
-import AuthPage from '../pages/AuthPage/AuthPage'
-import Dashboard from '../pages/Dashboard/Dashboard'
-import Patients from '../pages/Patients'
-import Profile from '../pages/Profile/Profile'
-import FutureModulePage from '../pages/Shared/FutureModulePage'
+import { AuthPage, Dashboard, Patients, Profile, FutureModulePage } from '../pages'
 
 function AppRoutes() {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth)

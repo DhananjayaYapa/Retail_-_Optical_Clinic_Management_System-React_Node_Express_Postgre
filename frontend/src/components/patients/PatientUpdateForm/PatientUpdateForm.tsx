@@ -11,7 +11,11 @@ import {
   IconButton,
 } from '@mui/material'
 import type { BranchListItem, PatientEntryFormDto } from '../../../utilities/models'
-import { PatientDetailsSection, ContactDetailsSection, InsuranceAdditionalSection } from '../shared'
+import {
+  PatientDetailsSection,
+  ContactDetailsSection,
+  InsuranceAdditionalSection,
+} from '../../shared'
 
 interface PatientUpdateFormProps {
   open: boolean

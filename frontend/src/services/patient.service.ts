@@ -47,6 +47,7 @@ const toPatientListItem = (patient: PatientApiRecord): PatientListItem => {
     healthCardNumber: patient.insuranceInfo?.healthCardNumber || 'N/A',
     healthCardStatus: resolveHealthCardStatus(patient),
     refDoctor: patient.insuranceInfo?.preferredDoctor || 'N/A',
+    deletedAt: patient.deletedAt,
   }
 }
 
@@ -73,7 +74,8 @@ export const patientService = {
 
   async getPatientById(id: number): Promise<PatientFullApiRecord> {
     const response = await axiosPrivateInstance.get<PatientFullApiResponse>(
-      `${API_ROUTES.PATIENTS}/${id}`
+      `${API_ROUTES.PATIENTS}/${id}`,
+      { params: { includeDeleted: true } }
     )
     return response.data.data
   },
@@ -88,5 +90,17 @@ export const patientService = {
       params: { limit: 100 },
     })
     return response.data.data.data as BranchListItem[]
+  },
+
+  async deletePatient(id: number, reason: string) {
+    const response = await axiosPrivateInstance.delete(`${API_ROUTES.PATIENTS}/${id}`, {
+      data: { reason },
+    })
+    return response.data
+  },
+
+  async restorePatient(id: number) {
+    const response = await axiosPrivateInstance.post(`${API_ROUTES.PATIENTS}/${id}/restore`)
+    return response.data
   },
 }

@@ -12,6 +12,7 @@ import {
   TextField,
 } from '@mui/material'
 import type { PatientFilterFormDto, PatientFilterOptions } from '../../../utilities/models'
+import { AGE_RANGE_OPTIONS } from '../../../utilities/constants/patient.constants'
 
 interface PatientFiltersProps {
   filters: PatientFilterFormDto
@@ -20,16 +21,6 @@ interface PatientFiltersProps {
   onInputFocus: (property: keyof PatientFilterFormDto) => void
   onReset: () => void
 }
-
-const AGE_RANGE_OPTIONS = [
-  { value: '', label: 'All Ages' },
-  { value: '0-12', label: '0-12' },
-  { value: '13-18', label: '13-18' },
-  { value: '19-35', label: '19-35' },
-  { value: '36-50', label: '36-50' },
-  { value: '51-65', label: '51-65' },
-  { value: '66+', label: '66+' },
-]
 
 const PatientFilters = ({
   filters,

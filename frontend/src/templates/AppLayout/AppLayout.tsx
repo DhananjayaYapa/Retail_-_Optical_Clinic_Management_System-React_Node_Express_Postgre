@@ -39,7 +39,10 @@ import {
   APP_NAME,
   DRAWER_WIDTH,
   DRAWER_COLLAPSED_WIDTH,
+  FEATURES,
 } from '../../utilities/constants'
+import { usePermission } from '../../utilities/hooks/usePermission'
+import type { FeatureKey } from '../../utilities/constants/permissions.config'
 import { AppLayoutHeader } from '../index'
 import styles from './AppLayout.module.scss'
 
@@ -47,6 +50,7 @@ interface NavItem {
   label: string
   path: string
   icon: React.ReactNode
+  feature: FeatureKey
 }
 
 const navItems: NavItem[] = [
@@ -54,38 +58,50 @@ const navItems: NavItem[] = [
     label: 'Dashboard',
     path: APP_ROUTES.DASHBOARD,
     icon: <DashboardIcon />,
+    feature: FEATURES.NAV_DASHBOARD,
   },
   {
     label: 'Patients',
     path: APP_ROUTES.PATIENTS,
     icon: <PatientsIcon />,
+    feature: FEATURES.NAV_PATIENTS,
   },
   {
     label: 'Appointments',
     path: APP_ROUTES.APPOINTMENTS,
     icon: <AppointmentsIcon />,
+    feature: FEATURES.NAV_APPOINTMENTS,
   },
   {
     label: 'EMR',
     path: APP_ROUTES.EMR,
     icon: <EmrIcon />,
+    feature: FEATURES.NAV_EMR,
   },
   {
     label: 'Billing',
     path: APP_ROUTES.BILLING,
     icon: <BillingIcon />,
+    feature: FEATURES.NAV_BILLING,
   },
   {
     label: 'Reports',
     path: APP_ROUTES.REPORTS,
     icon: <ReportIcon />,
+    feature: FEATURES.NAV_REPORTS,
   },
   {
     label: 'Profile',
     path: APP_ROUTES.PROFILE,
     icon: <PersonIcon />,
+    feature: FEATURES.NAV_PROFILE,
   },
 ]
+
+const NavItemGuard = ({ item, children }: { item: NavItem; children: React.ReactNode }) => {
+  const allowed = usePermission(item.feature)
+  return allowed ? <>{children}</> : null
+}
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -153,43 +169,45 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       {/* Navigation */}
       <List sx={{ flex: 1, pt: 2 }}>
         {navItems.map((item) => (
-          <ListItem key={item.path} disablePadding sx={{ display: 'block' }}>
-            <ListItemButton
-              component={RouterLink}
-              to={item.path}
-              selected={location.pathname === item.path}
-              sx={{
-                minHeight: 48,
-                justifyContent: collapsed ? 'center' : 'initial',
-                px: 2.5,
-                borderRadius: 2,
-                mx: 1,
-                mb: 0.5,
-                '&.Mui-selected': {
-                  bgcolor: 'rgba(34, 197, 94, 0.15)',
-                  color: 'primary.main',
-                  '& .MuiListItemIcon-root': {
-                    color: 'primary.main',
-                  },
-                  '&:hover': {
-                    bgcolor: 'rgba(34, 197, 94, 0.25)',
-                  },
-                },
-              }}
-              onClick={() => isMobile && setMobileOpen(false)}
-            >
-              <ListItemIcon
+          <NavItemGuard key={item.path} item={item}>
+            <ListItem disablePadding sx={{ display: 'block' }}>
+              <ListItemButton
+                component={RouterLink}
+                to={item.path}
+                selected={location.pathname === item.path}
                 sx={{
-                  minWidth: 0,
-                  mr: collapsed ? 0 : 2,
-                  justifyContent: 'center',
+                  minHeight: 48,
+                  justifyContent: collapsed ? 'center' : 'initial',
+                  px: 2.5,
+                  borderRadius: 2,
+                  mx: 1,
+                  mb: 0.5,
+                  '&.Mui-selected': {
+                    bgcolor: 'rgba(34, 197, 94, 0.15)',
+                    color: 'primary.main',
+                    '& .MuiListItemIcon-root': {
+                      color: 'primary.main',
+                    },
+                    '&:hover': {
+                      bgcolor: 'rgba(34, 197, 94, 0.25)',
+                    },
+                  },
                 }}
+                onClick={() => isMobile && setMobileOpen(false)}
               >
-                {item.icon}
-              </ListItemIcon>
-              {!collapsed && <ListItemText primary={item.label} />}
-            </ListItemButton>
-          </ListItem>
+                <ListItemIcon
+                  sx={{
+                    minWidth: 0,
+                    mr: collapsed ? 0 : 2,
+                    justifyContent: 'center',
+                  }}
+                >
+                  {item.icon}
+                </ListItemIcon>
+                {!collapsed && <ListItemText primary={item.label} />}
+              </ListItemButton>
+            </ListItem>
+          </NavItemGuard>
         ))}
       </List>
 
