@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { TOKEN_KEY } from '../utilities/constants'
+import { TOKEN_KEY, USER_KEY } from '../utilities/constants'
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
 
@@ -30,6 +30,7 @@ axiosPrivateInstance.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem(TOKEN_KEY)
+      localStorage.removeItem(USER_KEY)
       window.location.replace('/login')
     }
     return Promise.reject(error)

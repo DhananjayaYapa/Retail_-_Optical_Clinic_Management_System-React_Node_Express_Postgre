@@ -34,6 +34,7 @@ import {
 } from '@mui/icons-material'
 import { authActions } from '../../redux/actions/index'
 import type { RootState } from '../../redux/store/index'
+import { authService } from '../../services'
 import {
   APP_ROUTES,
   APP_NAME,
@@ -138,6 +139,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   const handleLogout = () => {
     handleMenuClose()
+    authService.logout().catch(() => {})
     dispatch(authActions.logout())
     navigate(APP_ROUTES.LOGIN)
   }

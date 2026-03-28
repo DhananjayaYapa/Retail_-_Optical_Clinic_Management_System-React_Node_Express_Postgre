@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { call, put, takeEvery } from 'redux-saga/effects'
+import { call, put, takeEvery, takeLatest } from 'redux-saga/effects'
 import { patientService } from '../../services'
 import { PATIENT_ACTION_TYPES, COMMON_ACTION_TYPES } from '../../utilities/constants'
+import { DEFAULT_FETCH_PARAMS } from '../../utilities/constants/patient.constants'
 import { dispatchAlert } from '../../utilities/helpers/commonSaga'
 import type { CreatePatientPayload, UpdatePatientPayload } from '../../utilities/models'
 
@@ -41,7 +42,7 @@ function* createPatientSaga(action: { type: string; payload: CreatePatientPayloa
     )
     yield put({
       type: PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.REQUEST,
-      params: { includeDeleted: true },
+      params: DEFAULT_FETCH_PARAMS,
     })
   } catch (error: any) {
     const isDuplicate =
@@ -110,7 +111,7 @@ function* updatePatientSaga(action: {
     )
     yield put({
       type: PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.REQUEST,
-      params: { includeDeleted: true },
+      params: DEFAULT_FETCH_PARAMS,
     })
   } catch (error: any) {
     const isDuplicate =
@@ -160,7 +161,7 @@ function* deletePatientSaga(action: { type: string; payload: { id: number; reaso
     )
     yield put({
       type: PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.REQUEST,
-      params: { includeDeleted: true },
+      params: DEFAULT_FETCH_PARAMS,
     })
   } catch (error: any) {
     yield put({
@@ -189,7 +190,7 @@ function* restorePatientSaga(action: { type: string; payload: number }) {
     )
     yield put({
       type: PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.REQUEST,
-      params: { includeDeleted: true },
+      params: DEFAULT_FETCH_PARAMS,
     })
   } catch (error: any) {
     yield put({
@@ -220,7 +221,7 @@ function* fetchBranchesSaga() {
 }
 
 export default function* patientSaga() {
-  yield takeEvery(
+  yield takeLatest(
     PATIENT_ACTION_TYPES.FETCH_PATIENTS + COMMON_ACTION_TYPES.REQUEST,
     fetchPatientsSaga
   )
@@ -228,7 +229,7 @@ export default function* patientSaga() {
     PATIENT_ACTION_TYPES.CREATE_PATIENT + COMMON_ACTION_TYPES.REQUEST,
     createPatientSaga
   )
-  yield takeEvery(
+  yield takeLatest(
     PATIENT_ACTION_TYPES.FETCH_PATIENT_BY_ID + COMMON_ACTION_TYPES.REQUEST,
     fetchPatientByIdSaga
   )
@@ -244,7 +245,7 @@ export default function* patientSaga() {
     PATIENT_ACTION_TYPES.RESTORE_PATIENT + COMMON_ACTION_TYPES.REQUEST,
     restorePatientSaga
   )
-  yield takeEvery(
+  yield takeLatest(
     PATIENT_ACTION_TYPES.FETCH_BRANCHES + COMMON_ACTION_TYPES.REQUEST,
     fetchBranchesSaga
   )
